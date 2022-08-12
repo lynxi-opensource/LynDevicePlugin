@@ -1,0 +1,123 @@
+@startuml arch
+
+object lynxi_exporter{
+    提供Prometheus格式的
+    设备信息查询接口
+}
+object lynxi_k8s_device_plugin{
+    对接kubelet
+}
+object lynxi_tools{
+    提供设备信息查询接口
+}
+
+lynxi_tools -up-* lynxi_exporter
+lynxi_tools -up-* lynxi_k8s_device_plugin
+
+@enduml
+
+@startuml lynxi_expoter
+
+package prometheus {}
+package lynxi_exporter {
+    object lynxi_exporter_main {
+        
+    }
+    package metrics {
+        interface Metric {
+            Record()
+        }
+        class States {
+            lynxi_device_state
+            lynxi_expoter_state
+            lynxi_smi_state
+        }
+        class Usages {
+            lynxi_device_apu_usage
+            lynxi_device_cpu_usage
+            lynxi_device_mem_usage
+        }
+        class DetailStates {
+            lynxi_device_temperature
+        }
+        States --|> Metric
+        Usages --|> Metric
+        DetailStates -right-|> Metric
+    }
+    lynxi_exporter_main *-- metrics: Record
+}
+lynxi_exporter --|> prometheus
+package lynxi_tools {
+    interface SMI{}
+}
+SMI -up-* metrics
+
+@enduml
+
+@startuml lynxi_k8s_device_plugin
+
+package Kubelet {
+    interface DevicePluginService {
+        ListAndWatch()
+        Allocate()
+    }
+}
+package lynxi_k8s_device_plugin {
+    object device_plugin_main {
+
+    }
+    interface Server {
+        Run()
+    }
+    interface DeviceGetter {
+        GetDevices()
+    }
+    interface Allocator {
+        Allocate()
+    }
+    class LynxiDockerAlloc {
+        根据id设置参数
+    }
+    class Service {}
+    device_plugin_main *-up- Server: Run
+    Service *-- DeviceGetter
+    Service *-- Allocator
+    LynxiDockerAlloc -up-|> Allocator
+}
+Service --|> DevicePluginService
+DevicePluginService --* Server
+package lynxi_tools {
+    interface SMI{}
+}
+SMI -up-|> DeviceGetter
+
+@enduml
+
+@startuml lynxi_tools
+
+package lynxi_tools {
+    package smi {
+        interface SMI {
+            GetDevices() []Device
+            GetBoards() []Board
+            GetErrors() []string
+        }
+        class Board {
+            ProductName
+            BoardID
+            MountTime
+            Manufacturer
+            Devices []Devices
+        }
+        class Device {
+            ID
+            IsOn
+            Model
+            ChipID
+        }
+        class SMIBin {}
+        SMIBin -right-|> SMI
+    }
+}
+
+@enduml

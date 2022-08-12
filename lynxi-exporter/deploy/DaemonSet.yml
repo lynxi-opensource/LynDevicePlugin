@@ -1,0 +1,38 @@
+kind: DaemonSet
+apiVersion: apps/v1
+metadata:
+  name: lynxi-exporter
+  namespace: project-system
+  labels:
+    lynxi.com: lynxi-exporter
+spec:
+  selector:
+    matchLabels:
+      lynxi.com: lynxi-exporter
+  template:
+    metadata:
+      labels:
+        lynxi.com: lynxi-exporter
+    spec:
+      containers:
+        - name: lynxi-exporter
+          image: "lynxidocker/lynxi-exporter:0.2.0"
+          ports:
+            - name: http-metrics
+              containerPort: 2112
+              protocol: TCP
+          imagePullPolicy: Always
+          env:
+            - name: LYNXI_VISIBLE_DEVICES
+              value: all
+          volumeMounts:
+            - name: lynxi-exporter
+              mountPath: /var/lib/kubelet/pod-resources/kubelet.sock
+      volumes:
+        - name: lynxi-exporter
+          hostPath:
+            path: /var/lib/kubelet/pod-resources/kubelet.sock
+      restartPolicy: Always
+      nodeSelector:
+        lynxi.com/apu.present: "true"
+      serviceAccount: lynxi-exporter-account

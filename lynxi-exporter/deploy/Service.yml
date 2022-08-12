@@ -1,0 +1,15 @@
+kind: Service
+apiVersion: v1
+metadata:
+  name: lynxi-exporter
+  namespace: project-system
+  labels:
+    lynxi.com: lynxi-exporter
+spec:
+  ports:
+    - name: http-metrics
+      protocol: TCP
+      port: 2112
+      targetPort: 2112
+  selector:
+    lynxi.com: lynxi-exporter

@@ -1,0 +1,56 @@
+devicePlugin:
+  enable: true
+  namespace: project-lynxi
+  name: lynxi-k8s-device-plugin
+  image: lynxidocker/lynxi-k8s-device-plugin:0.2.1
+  imagePullPolicy: Always
+  restartPolicy: Always
+  labels:
+    lynxi.com: lynxi-k8s-device-plugin
+  nodeSelector:
+    lynxi.com/apu.present: "true"
+
+lynxiExporter:
+  enable: true
+  namespace: project-lynxi
+  name: lynxi-exporter
+  image: lynxidocker/lynxi-exporter:0.2.1
+  imagePullPolicy: Always
+  restartPolicy: Always
+  labels:
+    lynxi.com: lynxi-exporter
+  nodeSelector:
+    lynxi.com/apu.present: "true"
+
+lynxiExporterService:
+  enable: true
+  namespace: project-lynxi
+  name: lynxi-exporter-service
+  type: ClusterIP
+  labels:
+    lynxi.com: lynxi-exporter-service
+  selector:
+    lynxi.com: lynxi-exporter
+
+lynxiExporterServiceMonitor:
+  enable: true
+  namespace: project-lynxi
+  name: lynxi-exporter-service-monitor
+  labels:
+    lynxi.com: lynxi-exporter-service-monitor
+  selector:
+    matchLabels:
+      lynxi.com: lynxi-exporter-service
+  namespaceSelector:
+    matchNames:
+      - project-lynxi
+  interval: 5s
+
+apu-feature-discovery:
+  namespace:
+    name: project-lynxi
+    # Specifies whether this namespace should be created or not
+    create: true
+  image:
+    repository: lynxidocker/apu-feature-discovery
+    pullPolicy: IfNotPresent

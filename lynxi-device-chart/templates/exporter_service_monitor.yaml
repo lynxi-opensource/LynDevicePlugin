@@ -1,0 +1,19 @@
+{{if .Values.lynxiExporterServiceMonitor.enable}}
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{.Values.lynxiExporterServiceMonitor.name}}
+  namespace: {{.Values.lynxiExporterServiceMonitor.namespace}}
+  labels:
+{{toYaml .Values.lynxiExporterServiceMonitor.labels | indent 4}}
+spec:
+  selector:
+{{toYaml .Values.lynxiExporterServiceMonitor.selector | indent 4}}
+  namespaceSelector:
+{{toYaml .Values.lynxiExporterServiceMonitor.namespaceSelector | indent 4}}
+  endpoints:
+    - interval: {{.Values.lynxiExporterServiceMonitor.interval}}
+      path: /metrics
+      port: http-metrics
+      scheme: http
+{{end}}

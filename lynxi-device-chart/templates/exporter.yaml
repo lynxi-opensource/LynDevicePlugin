@@ -1,0 +1,39 @@
+{{if .Values.lynxiExporter.enable}}
+kind: DaemonSet
+apiVersion: apps/v1
+metadata:
+  name: {{.Values.lynxiExporter.name}}
+  namespace: {{.Values.lynxiExporter.namespace}}
+  labels:
+{{toYaml .Values.lynxiExporter.labels | indent 4}}
+spec:
+  selector:
+    matchLabels:
+{{toYaml .Values.lynxiExporter.labels | indent 6}}
+  template:
+    metadata:
+      labels:
+{{toYaml .Values.lynxiExporter.labels | indent 8}}
+    spec:
+      containers:
+        - name: {{.Values.lynxiExporter.name}}
+          image: {{.Values.lynxiExporter.image}}
+          imagePullPolicy: {{.Values.lynxiExporter.imagePullPolicy}}
+          ports:
+            - name: http-metrics
+              containerPort: 2112
+              protocol: TCP
+          env:
+            - name: LYNXI_VISIBLE_DEVICES
+              value: all
+          volumeMounts:
+            - name: device-plugin
+              mountPath: /var/lib/kubelet/pod-resources/kubelet.sock
+      volumes:
+        - name: device-plugin
+          hostPath:
+            path: /var/lib/kubelet/pod-resources/kubelet.sock
+      restartPolicy: {{.Values.lynxiExporter.restartPolicy}}
+      nodeSelector: 
+{{toYaml .Values.lynxiExporter.nodeSelector | indent 8}}
+{{end}}

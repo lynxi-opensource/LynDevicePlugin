@@ -1,0 +1,33 @@
+kind: DaemonSet
+apiVersion: apps/v1
+metadata:
+  name: lynxi-k8s-device-plugin
+  namespace: project-system
+  labels:
+    lynxi.com: lynxi-k8s-device-plugin
+spec:
+  selector:
+    matchLabels:
+      lynxi.com: lynxi-k8s-device-plugin
+  template:
+    metadata:
+      labels:
+        lynxi.com: lynxi-k8s-device-plugin
+    spec:
+      containers:
+        - name: lynxi-k8s-device-plugin
+          image: "lynxidocker/lynxi-k8s-device-plugin:0.1.0"
+          imagePullPolicy: Always
+          env:
+            - name: LYNXI_VISIBLE_DEVICES
+              value: all
+          volumeMounts:
+            - name: device-plugin
+              mountPath: /var/lib/kubelet/device-plugins
+      volumes:
+        - name: device-plugin
+          hostPath:
+            path: /var/lib/kubelet/device-plugins
+      restartPolicy: Always
+      nodeSelector:
+        lynxi.com: apu

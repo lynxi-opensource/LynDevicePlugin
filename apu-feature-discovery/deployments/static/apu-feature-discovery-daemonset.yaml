@@ -1,0 +1,121 @@
+---
+# Source: apu-feature-discovery/templates/namespace.yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: project-lynxi # NFD namespace
+---
+# Source: apu-feature-discovery/templates/serviceaccount.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: apu-feature-discovery
+  namespace: project-lynxi
+  labels:
+    helm.sh/chart: apu-feature-discovery-0.1.1
+    app.kubernetes.io/name: apu-feature-discovery
+    app.kubernetes.io/instance: apu-feature-discovery-1644562680
+    app.kubernetes.io/version: "0.1.1"
+    app.kubernetes.io/managed-by: Helm
+---
+# Source: apu-feature-discovery/templates/clusterrole.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: apu-feature-discovery
+  labels:
+    helm.sh/chart: apu-feature-discovery-0.1.1
+    app.kubernetes.io/name: apu-feature-discovery
+    app.kubernetes.io/instance: apu-feature-discovery-1644562680
+    app.kubernetes.io/version: "0.1.1"
+    app.kubernetes.io/managed-by: Helm
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - nodes
+# when using command line flag --resource-labels to create extended resources
+# you will need to uncomment "- nodes/status"
+# - nodes/status
+  verbs:
+  - get
+  - patch
+  - update
+---
+# Source: apu-feature-discovery/templates/clusterrolebinding.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: apu-feature-discovery
+  labels:
+    helm.sh/chart: apu-feature-discovery-0.1.1
+    app.kubernetes.io/name: apu-feature-discovery
+    app.kubernetes.io/instance: apu-feature-discovery-1644562680
+    app.kubernetes.io/version: "0.1.1"
+    app.kubernetes.io/managed-by: Helm
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: apu-feature-discovery
+subjects:
+- kind: ServiceAccount
+  name: apu-feature-discovery
+  namespace: project-lynxi
+---
+# Source: apu-feature-discovery/templates/daemonset.yml
+# Copyright (c) 2019, NVIDIA CORPORATION.  All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: apu-feature-discovery
+  namespace: project-lynxi
+  labels:
+    helm.sh/chart: apu-feature-discovery-0.1.1
+    app.kubernetes.io/name: apu-feature-discovery
+    app.kubernetes.io/instance: apu-feature-discovery-1644562680
+    app.kubernetes.io/version: "0.1.1"
+    app.kubernetes.io/managed-by: Helm
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: apu-feature-discovery
+      app.kubernetes.io/instance: apu-feature-discovery-1644562680
+  updateStrategy:
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: apu-feature-discovery
+        app.kubernetes.io/instance: apu-feature-discovery-1644562680
+    spec:
+      # Mark this pod as a critical add-on; when enabled, the critical add-on
+      # scheduler reserves resources for critical add-on pods so that they can
+      # be rescheduled after a failure.
+      # See https://kubernetes.io/docs/tasks/administer-cluster/guaranteed-scheduling-critical-addon-pods/
+      priorityClassName: "system-node-critical"
+      securityContext:
+        {}
+      serviceAccountName: apu-feature-discovery
+      containers:
+        - image: lynxidocker/apu-feature-discovery:0.1.1
+          imagePullPolicy: IfNotPresent
+          name: apu-feature-discovery
+          env:
+          - name: NODE_NAME
+            valueFrom:
+              fieldRef:
+                fieldPath: spec.nodeName
+          securityContext:

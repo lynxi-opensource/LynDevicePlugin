@@ -1,0 +1,35 @@
+{{if .Values.devicePlugin.enable}}
+kind: DaemonSet
+apiVersion: apps/v1
+metadata:
+  name: {{.Values.devicePlugin.name}}
+  namespace: {{.Values.devicePlugin.namespace}}
+  labels: 
+{{toYaml .Values.devicePlugin.labels | indent 4}}
+spec:
+  selector:
+    matchLabels:
+{{toYaml .Values.devicePlugin.labels | indent 6}}
+  template:
+    metadata:
+      labels:
+{{toYaml .Values.devicePlugin.labels | indent 8}}
+    spec:
+      containers:
+        - name: {{.Values.devicePlugin.name}}
+          image: {{.Values.devicePlugin.image}}
+          imagePullPolicy: {{.Values.devicePlugin.imagePullPolicy}}
+          env:
+            - name: LYNXI_VISIBLE_DEVICES
+              value: all
+          volumeMounts:
+            - name: device-plugin
+              mountPath: /var/lib/kubelet/device-plugins
+      volumes:
+        - name: device-plugin
+          hostPath:
+            path: /var/lib/kubelet/device-plugins
+      restartPolicy: {{.Values.devicePlugin.restartPolicy}}
+      nodeSelector: 
+{{toYaml .Values.devicePlugin.nodeSelector | indent 8}}
+{{end}}
