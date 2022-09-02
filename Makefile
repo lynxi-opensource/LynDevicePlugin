@@ -1,5 +1,5 @@
-lynxi-k8s-device-plugin-version = 0.2.1
-lynxi-exporter-version = 0.2.1
+lynxi-k8s-device-plugin-version = 1.0.0
+lynxi-exporter-version = 1.0.0
 
 build_with_docker:
 	docker build -t lyndeviceplugin_image_for_build:latest . -f build.Dockerfile
@@ -18,4 +18,4 @@ build:
 
 chart:
 	mkdir release -p
-	cd release && helm package ../lynxi-device-chart
+	cd release && helm package ../LynDevicePlugin

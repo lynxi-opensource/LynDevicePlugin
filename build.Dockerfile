@@ -1,4 +1,4 @@
-FROM lynxidocker/lynxi-docker-ubuntu-18.04:1.3.1 as builder
+FROM lynxidocker/lynxi-docker-ubuntu-18.04:1.4.0 as builder
 
 ENV LYNXI_VISIBLE_DEVICES=all
 RUN apt update

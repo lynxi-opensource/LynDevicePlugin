@@ -19,23 +19,23 @@
 2. 安装lynxi-docker请参考lynxi-docker用户手册
 3. 增加改节点到k8s集群
 
-## 安装lynxi-device-chart
+## 安装LynDevicePlugin
 
 1. 创建namespace：`kubectl create namespace project-system`
 2. 安装helm，请[参考](https://helm.sh/docs/intro/quickstart/)
-3. 安装lynxi-device-chart: 
-   1. 如果k8s集权中没有安装Prometheus-operator，执行`helm install -n project-system --set lynxiExporterServiceMonitor.enable=false lynxi-device-chart lynxi-device-chart-0.1.0.tgz`安装
-   2. 否则，执行`helm install -n project-system lynxi-device-chart lynxi-device-chart-0.1.0.tgz`安装
-4. 查看安装是否成功: 执行`helm list -n project-system`，查看lynxi-device-chart的状态是否为deployed
+3. 安装LynDevicePlugin: 
+   1. 如果k8s集权中没有安装Prometheus-operator，执行`helm install -n project-system --set lynxiExporterServiceMonitor.enable=false LynDevicePlugin LynDevicePlugin-0.1.0.tgz`安装
+   2. 否则，执行`helm install -n project-system LynDevicePlugin LynDevicePlugin-0.1.0.tgz`安装
+4. 查看安装是否成功: 执行`helm list -n project-system`，查看LynDevicePlugin的状态是否为deployed
 
 ```
 NAME                    NAMESPACE       REVISION        UPDATED                                 STATUS          CHART                           APP VERSION
-lynxi-device-chart      project-system  1               2022-01-26 10:04:28.7551467 +0800 CST   deployed        lynxi-device-chart-0.1.0        1.16.0
+LynDevicePlugin      project-system  1               2022-01-26 10:04:28.7551467 +0800 CST   deployed        LynDevicePlugin-1.0.0        1.16.0
 ```
 
 ## 卸载
 
-1. `helm uninstall lynxi-device-chart`
+1. `helm uninstall LynDevicePlugin`
 
 ## lynxi-exporter提供的Prometheus指标
 
