@@ -15,7 +15,8 @@ make chart
 
 ## 更新版本
 
-1. 更新build.Dockerfile中的基础sdk镜像
-2. 更新Makefile中的版本号
-3. 更新LynDevicePlugin中的image tag和版本号
-4. 构建发布
+1. 构建新sdk基础镜像
+2. 更新build.Dockerfile和Dockerfile中的基础sdk镜像
+3. 更新Makefile中的版本号
+4. 更新LynDevicePlugin中的image tag和版本号
+5. 构建发布

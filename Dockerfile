@@ -1,5 +1,5 @@
 
-FROM lynxidocker/lynxi-docker-ubuntu-18.04:1.3.1
+FROM lynxidocker/lynxi-docker-ubuntu-18.04:1.4.0
 
 ARG BIN
 
