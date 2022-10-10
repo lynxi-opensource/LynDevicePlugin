@@ -1,21 +1,23 @@
-lynxi-k8s-device-plugin-version = 1.0.0
-lynxi-exporter-version = 1.0.0
+lynxi-k8s-device-plugin-version = 1.0.1
+lynxi-exporter-version = 1.0.1
 
-build_with_docker:
-	docker build -t lyndeviceplugin_image_for_build:latest . -f build.Dockerfile
-	docker run --rm -e LYNXI_VISIBLE_DEVICES=all -v $(PWD):/work lyndeviceplugin_image_for_build:latest bash ./build.sh
+build:
+	docker build -t lynxidocker/lynxi-k8s-device-plugin:${lynxi-k8s-device-plugin-version} . -f Dockerfile --build-arg BIN=lynxi-k8s-device-plugin
+	docker build -t lynxidocker/lynxi-exporter:${lynxi-exporter-version} . -f Dockerfile --build-arg BIN=lynxi-exporter
 
-push-lynxi-k8s-device-plugin: build_with_docker
-	docker build -t lynxidocker/lynxi-k8s-device-plugin:${lynxi-k8s-device-plugin-version} release -f Dockerfile --build-arg BIN=lynxi-k8s-device-plugin
+push: build
 	docker push lynxidocker/lynxi-k8s-device-plugin:${lynxi-k8s-device-plugin-version}
-
-push-lynxi-exporter: build_with_docker
-	docker build -t lynxidocker/lynxi-exporter:${lynxi-exporter-version} release -f Dockerfile --build-arg BIN=lynxi-exporter
 	docker push lynxidocker/lynxi-exporter:${lynxi-exporter-version}
-
-build: 
-	./build.sh
 
 chart:
 	mkdir release -p
 	cd release && helm package ../LynDevicePlugin
+
+install:
+	helm install -n device-plugin lynxi-device-plugin release/LynDevicePlugin-${lynxi-k8s-device-plugin-version}.tgz
+
+uninstall:
+	helm uninstall -n device-plugin lynxi-device-plugin
+
+list:
+	helm list -n device-plugin

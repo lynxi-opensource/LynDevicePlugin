@@ -13,7 +13,8 @@ import (
 func main() {
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
 	smiImpl := smi.NewSMIC()
-	svc := service.NewService(smiImpl, allocator.Alloc{}, time.Second*3)
-	s := server.ServerImp{}
+	crash := make(chan error)
+	svc := service.NewService(smiImpl, allocator.Alloc{}, crash, time.Second*3)
+	s := server.ServerImp{Crash: crash}
 	log.Fatalln(s.Run("lynxi_device.sock", "lynxi.com/device", svc))
 }

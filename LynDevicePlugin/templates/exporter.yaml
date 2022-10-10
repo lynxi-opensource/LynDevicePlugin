@@ -28,11 +28,16 @@ spec:
               value: all
           volumeMounts:
             - name: device-plugin
-              mountPath: /var/lib/kubelet/pod-resources/kubelet.sock
+              mountPath: /var/lib/kubelet/pod-resources/
+            - name: localtime
+              mountPath: /etc/localtime
       volumes:
         - name: device-plugin
           hostPath:
-            path: /var/lib/kubelet/pod-resources/kubelet.sock
+            path: /var/lib/kubelet/pod-resources/
+        - name: localtime
+          hostPath:
+            path: /etc/localtime
       restartPolicy: {{.Values.lynxiExporter.restartPolicy}}
       nodeSelector: 
 {{toYaml .Values.lynxiExporter.nodeSelector | indent 8}}

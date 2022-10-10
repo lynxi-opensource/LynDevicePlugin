@@ -25,10 +25,15 @@ spec:
           volumeMounts:
             - name: device-plugin
               mountPath: /var/lib/kubelet/device-plugins
+            - name: localtime
+              mountPath: /etc/localtime
       volumes:
         - name: device-plugin
           hostPath:
             path: /var/lib/kubelet/device-plugins
+        - name: localtime
+          hostPath:
+            path: /etc/localtime
       restartPolicy: {{.Values.devicePlugin.restartPolicy}}
       nodeSelector: 
 {{toYaml .Values.devicePlugin.nodeSelector | indent 8}}

@@ -2,13 +2,14 @@
 package smi_c
 
 /*
-#cgo LDFLAGS: -lLYNSMICLIENTCOMM -lLYNCHIPSDKCLIENT -lLYNCHIPSDKCLIENTCOMM
-#include <lyn_device.h>
+#cgo LDFLAGS: -lLYNSMICLIENTCOMM
 #include <lyn_smi.h>
-#include <lyn_err.h>
 */
 import "C"
-import "strconv"
+import (
+	"os"
+	"strconv"
+)
 
 type Error C.lynError_t
 
@@ -28,9 +29,8 @@ func check(code C.lynError_t) error {
 }
 
 func GetDeviceCount() (int, error) {
-	var count C.int32_t
-	err := check(C.lynGetDeviceCount(&count))
-	return int(count), err
+	devFiles, err := os.ReadDir("/dev/lynd")
+	return len(devFiles) - 1, err
 }
 
 type BoardProperties struct {

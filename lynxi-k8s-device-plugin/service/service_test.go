@@ -106,7 +106,7 @@ func TestService_ListAndWatch(t *testing.T) {
 		{DeviceInfo: smi.DeviceInfo{ID: 2, IsOn: true}},
 	}
 	smm.setDevices(devices)
-	svc := NewService(smm, allocatorMock{}, interval)
+	svc := NewService(smm, allocatorMock{}, make(chan<- error), interval)
 	respChan := make(chan *pluginapi.ListAndWatchResponse)
 	go func() {
 		assert.Nil(t, svc.ListAndWatch(nil, &sendMocker{callback: func(resp *pluginapi.ListAndWatchResponse) {
@@ -126,7 +126,7 @@ func TestService_ListAndWatch(t *testing.T) {
 }
 
 func TestService_Allocate(t *testing.T) {
-	svc := NewService(&smiMock{}, allocatorMock{}, time.Millisecond*100)
+	svc := NewService(&smiMock{}, allocatorMock{}, make(chan<- error), time.Millisecond*100)
 	deviceIDs := []string{"0", "1"}
 	reqs := []*pluginapi.ContainerAllocateRequest{
 		{DevicesIDs: deviceIDs},

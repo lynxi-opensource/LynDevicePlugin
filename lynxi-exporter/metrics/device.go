@@ -95,13 +95,14 @@ const (
 	labelSerialNumber = "SerialNumber"
 	labelModel        = "Model"
 	labelID           = "ID"
+	labelUUID         = "UUID"
 	labelMemTotal     = "MemTotal"
 )
 
 type labels []string
 
 var boardLabels labels = labels{labelProductName, labelManufacturer, labelMountTime, labelBoardID, labelSerialNumber}
-var deviceMetricLabels labels = append(boardLabels, labels{labelModel, labelID}...)
+var deviceMetricLabels labels = append(boardLabels, labels{labelModel, labelID, labelUUID}...)
 var memLabels labels = append(deviceMetricLabels, labels{labelMemTotal}...)
 
 var mountTime = time.Now().Format(time.RFC3339)
@@ -130,6 +131,8 @@ func (ls labels) getValue(device smi.Device, i int) string {
 		return device.Model
 	case labelID:
 		return strconv.Itoa(device.ID)
+	case labelUUID:
+		return device.UUID
 	case labelMemTotal:
 		return strconv.Itoa(int(device.MemTotal))
 	default:

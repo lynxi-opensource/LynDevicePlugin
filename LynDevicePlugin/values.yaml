@@ -2,7 +2,7 @@ devicePlugin:
   enable: true
   namespace: project-lynxi
   name: lynxi-k8s-device-plugin
-  image: lynxidocker/lynxi-k8s-device-plugin:1.0.0
+  image: lynxidocker/lynxi-k8s-device-plugin:1.0.1
   imagePullPolicy: Always
   restartPolicy: Always
   labels:
@@ -14,7 +14,7 @@ lynxiExporter:
   enable: true
   namespace: project-lynxi
   name: lynxi-exporter
-  image: lynxidocker/lynxi-exporter:1.0.0
+  image: lynxidocker/lynxi-exporter:1.0.1
   imagePullPolicy: Always
   restartPolicy: Always
   labels:

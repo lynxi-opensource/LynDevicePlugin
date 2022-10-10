@@ -2,6 +2,7 @@ package metrics
 
 import (
 	"context"
+	"log"
 	"net"
 	"strings"
 	"time"
@@ -38,34 +39,38 @@ func labelsForPodContainer() []string {
 
 // Record 一直阻塞不会返回错误，外部通过lynxi_exporter_state或日志查看exporter的状态是否正常
 func (m *PodContainerRecorder) Record() error {
-	conn, err := m.dial("/var/lib/kubelet/pod-resources/kubelet.sock", 5*time.Second)
-	if err != nil {
-		return err
-	}
-	defer conn.Close()
-
-	client := podresources.NewPodResourcesListerClient(conn)
-	ticker := time.NewTicker(m.timeout)
-	for range ticker.C {
-		resp, err := client.List(context.Background(), &podresources.ListPodResourcesRequest{})
+	for {
+		log.Println("connect kubelet")
+		conn, err := m.dial("/var/lib/kubelet/pod-resources/kubelet.sock", 5*time.Second)
 		if err != nil {
 			GlobalRecorder.logError(err)
-		} else {
-			m.lynxiPodContainerDeviceCount.Reset()
-			for _, pod := range resp.PodResources {
-				for _, container := range pod.Containers {
-					for _, device := range container.Devices {
-						if device.ResourceName == "lynxi.com/device" {
-							m.lynxiPodContainerDeviceCount.WithLabelValues(
-								pod.Name, container.Name, pod.Namespace,
-								strings.Join(device.DeviceIds, ",")).Set(float64(len(device.DeviceIds)))
+			continue
+		}
+		defer conn.Close()
+
+		client := podresources.NewPodResourcesListerClient(conn)
+		ticker := time.NewTicker(m.timeout)
+		for range ticker.C {
+			resp, err := client.List(context.Background(), &podresources.ListPodResourcesRequest{})
+			if err != nil {
+				GlobalRecorder.logError(err)
+				break
+			} else {
+				m.lynxiPodContainerDeviceCount.Reset()
+				for _, pod := range resp.PodResources {
+					for _, container := range pod.Containers {
+						for _, device := range container.Devices {
+							if device.ResourceName == "lynxi.com/device" {
+								m.lynxiPodContainerDeviceCount.WithLabelValues(
+									pod.Name, container.Name, pod.Namespace,
+									strings.Join(device.DeviceIds, ",")).Set(float64(len(device.DeviceIds)))
+							}
 						}
 					}
 				}
 			}
 		}
 	}
-	return nil
 }
 
 // dial establishes the gRPC communication with the registered device plugin.

@@ -5,10 +5,11 @@ import (
 	"log"
 	"net"
 	"os"
-	"path"
-	"time"
-	"syscall"
 	"os/signal"
+	"path"
+	"syscall"
+	"time"
+
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 	pluginapi "k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
@@ -28,7 +29,7 @@ type Server interface {
 }
 
 type ServerImp struct {
-
+	Crash <-chan error
 }
 
 //
@@ -43,26 +44,25 @@ restart:
 		srv.Stop()
 	} else {
 		srv = &LynxiServer{
-		resourceName:     resourceName,
-		socket:           path.Join(pluginapi.DevicePluginPath, socket),
-		// These will be reinitialized every
-		// time the plugin server is restarted.
-		server:        nil,
-		plugin:  	  &service,
+			resourceName: resourceName,
+			socket:       path.Join(pluginapi.DevicePluginPath, socket),
+			// These will be reinitialized every
+			// time the plugin server is restarted.
+			server: nil,
+			plugin: &service,
 		}
 	}
 
-	pluginStartError := make(chan struct{})
-
-	if srv.Start() != nil {
-		close(pluginStartError)
+	if err := srv.Start(); err != nil {
+		log.Println(err)
+		goto restart
 	}
 
 events:
 	for {
 		select {
 		// If there was an error starting any plugins, restart them all.
-		case <-pluginStartError:
+		case <-m.Crash:
 			goto restart
 		case s := <-sigs:
 			switch s {
@@ -80,12 +80,11 @@ events:
 	return nil
 }
 
-
 type LynxiServer struct {
-	socket string	// local grpc socket file name
-	resourceName string	// 用于k8s分配资源时使用的资源名
-	server *grpc.Server	// grpc server
-	plugin *pluginapi.DevicePluginServer // k8s plugin
+	socket       string                        // local grpc socket file name
+	resourceName string                        // 用于k8s分配资源时使用的资源名
+	server       *grpc.Server                  // grpc server
+	plugin       *pluginapi.DevicePluginServer // k8s plugin
 }
 
 //
@@ -121,7 +120,7 @@ func (m *LynxiServer) Stop() error {
 	if err != nil && !os.IsNotExist(err) {
 		return err
 	}
-	
+
 	m.cleanup()
 	return nil
 }

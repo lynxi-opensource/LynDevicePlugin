@@ -23,10 +23,10 @@
 
 1. 创建namespace：`kubectl create namespace project-system`
 2. 安装helm，请[参考](https://helm.sh/docs/intro/quickstart/)
-3. 安装LynDevicePlugin: 
-   1. 如果k8s集权中没有安装Prometheus-operator，执行`helm install -n project-system --set lynxiExporterServiceMonitor.enable=false LynDevicePlugin LynDevicePlugin-0.1.0.tgz`安装
-   2. 否则，执行`helm install -n project-system LynDevicePlugin LynDevicePlugin-0.1.0.tgz`安装
-4. 查看安装是否成功: 执行`helm list -n project-system`，查看LynDevicePlugin的状态是否为deployed
+3. 安装LynDevicePlugin:
+   1. 如果k8s集权中没有安装Prometheus-operator，执行`helm install -n project-system --set lynxiExporterServiceMonitor.enable=false lynxi-device-plugin LynDevicePlugin-0.1.0.tgz`安装
+   2. 否则，执行`helm install -n project-system lynxi-device-plugin LynDevicePlugin-0.1.0.tgz`安装
+4. 查看安装是否成功: 执行`helm list -n project-system`，查看lynxi-device-plugin的状态是否为deployed
 
 ```
 NAME                    NAMESPACE       REVISION        UPDATED                                 STATUS          CHART                           APP VERSION

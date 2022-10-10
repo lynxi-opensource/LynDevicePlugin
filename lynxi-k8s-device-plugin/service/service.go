@@ -28,15 +28,17 @@ type Service struct {
 	smi       DeviceGetter
 	deviceMap map[int]bool
 	interval  time.Duration
+	crash     chan<- error
 }
 
 // NewService 构造一个Service
-func NewService(smi DeviceGetter, allocator allocator.Allocator, pollInterval time.Duration) *Service {
+func NewService(smi DeviceGetter, allocator allocator.Allocator, crash chan<- error, pollInterval time.Duration) *Service {
 	return &Service{
 		smi:       smi,
 		allocator: allocator,
 		deviceMap: make(map[int]bool),
 		interval:  pollInterval,
+		crash:     crash,
 	}
 }
 
@@ -65,14 +67,14 @@ func smiDevicesToPluginDevices(devices []smi.Device) (ret []*pluginapi.Device) {
 // ListAndWatch 返回所有板卡信息
 func (m *Service) ListAndWatch(_ *pluginapi.Empty, sender pluginapi.DevicePlugin_ListAndWatchServer) error {
 	ticker := time.NewTicker(m.interval)
+	log.Println("start send device status")
 	for {
 		devices, err := m.smi.GetDevices()
 		if err != nil {
 			log.Println("smi GetDevices err: ", err)
 		}
 		if err = sender.Send(&pluginapi.ListAndWatchResponse{Devices: smiDevicesToPluginDevices(devices)}); err != nil {
-			log.Println("ListAndWatch: send to kubelet err:", err)
-			// return err // FIXME: 也许需要restart
+			log.Fatalln("ListAndWatch: send to kubelet err:", err)
 		}
 		<-ticker.C
 	}
