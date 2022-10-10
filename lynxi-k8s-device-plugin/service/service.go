@@ -28,17 +28,15 @@ type Service struct {
 	smi       DeviceGetter
 	deviceMap map[int]bool
 	interval  time.Duration
-	crash     chan<- error
 }
 
 // NewService 构造一个Service
-func NewService(smi DeviceGetter, allocator allocator.Allocator, crash chan<- error, pollInterval time.Duration) *Service {
+func NewService(smi DeviceGetter, allocator allocator.Allocator, pollInterval time.Duration) *Service {
 	return &Service{
 		smi:       smi,
 		allocator: allocator,
 		deviceMap: make(map[int]bool),
 		interval:  pollInterval,
-		crash:     crash,
 	}
 }
 

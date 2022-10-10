@@ -29,7 +29,6 @@ type Server interface {
 }
 
 type ServerImp struct {
-	Crash <-chan error
 }
 
 //
@@ -53,16 +52,18 @@ restart:
 		}
 	}
 
+	pluginStartError := make(chan struct{})
+
 	if err := srv.Start(); err != nil {
 		log.Println(err)
-		goto restart
+		close(pluginStartError)
 	}
 
 events:
 	for {
 		select {
 		// If there was an error starting any plugins, restart them all.
-		case <-m.Crash:
+		case <-pluginStartError:
 			goto restart
 		case s := <-sigs:
 			switch s {
