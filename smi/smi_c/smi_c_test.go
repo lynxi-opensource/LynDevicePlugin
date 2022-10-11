@@ -15,7 +15,7 @@ func TestGetDeviceCount(t *testing.T) {
 	tmp, err := exec.Command("sh", "-c", "ls /dev/lynd/ | wc -w").Output()
 	assert.Nil(t, err)
 	want, err := strconv.Atoi(string(bytes.TrimSpace(tmp)))
-	want -= 1 // exclude the manager device
+	want -= 2 // exclude the manager device
 	assert.Nil(t, err)
 	assert.Equal(t, want, got)
 }
