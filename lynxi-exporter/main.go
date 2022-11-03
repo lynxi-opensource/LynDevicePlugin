@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"net/http"
+	"strconv"
 	"time"
 
 	"lyndeviceplugin/lynxi-exporter/metrics"
@@ -21,13 +22,22 @@ func main() {
 	}()
 	timeout := 5 * time.Second
 	smiC := smi.NewSMIC()
+	deviceID2UUID := make(map[string]string)
+	deviceInfos, err := smiC.GetDevices()
+	if err != nil {
+		log.Fatalln(err)
+	}
+	for _, deviceInfo := range deviceInfos {
+		deviceID2UUID[strconv.Itoa(deviceInfo.ID)] = deviceInfo.UUID
+	}
+
 	// new device recorder and start record
 	deviceMetrics := metrics.NewDeviceRecorder(smiC, timeout)
 	go func() {
 		log.Fatalln(deviceMetrics.Record())
 	}()
 
-	podResources := metrics.NewPodContainerRecorder(timeout)
+	podResources := metrics.NewPodContainerRecorder(timeout, deviceID2UUID)
 	go func() {
 		log.Fatalln(podResources.Record())
 	}()

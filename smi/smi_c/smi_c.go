@@ -28,7 +28,7 @@ func check(code C.lynError_t) error {
 	return nil
 }
 
-func GetDeviceCount() (int, error) {
+func GetDeviceCountByDir() (int, error) {
 	devFiles, err := os.ReadDir("/dev/lynd")
 	cnt := 0
 	for _, f := range devFiles {
@@ -37,6 +37,12 @@ func GetDeviceCount() (int, error) {
 		}
 	}
 	return cnt, err
+}
+
+func GetDeviceCount() (int, error) {
+	var ret C.int32_t
+	err := check(C.lynGetDeviceCountSmi(&ret))
+	return int(ret), err
 }
 
 type BoardProperties struct {
