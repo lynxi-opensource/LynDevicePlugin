@@ -9,6 +9,10 @@ make push
 cd apu-feature-discovery
 make push
 cd ..
+
+# push hs110-kubeedge镜像，需要在hs110上执行
+make hs110-kubeedge-push
+
 # 构建chart
 make chart
 # 安装
