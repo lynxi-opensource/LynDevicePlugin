@@ -28,13 +28,13 @@ spec:
               value: all
           volumeMounts:
             - name: device-plugin
-              mountPath: /var/lib/kubelet/pod-resources/
+              mountPath: /var/lib/edged/pod-resources/
             - name: localtime
               mountPath: /etc/localtime
       volumes:
         - name: device-plugin
           hostPath:
-            path: /var/lib/kubelet/pod-resources/
+            path: /var/lib/edged/pod-resources/
         - name: localtime
           hostPath:
             path: /etc/localtime

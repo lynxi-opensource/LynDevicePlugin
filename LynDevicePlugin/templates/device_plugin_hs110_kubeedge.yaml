@@ -24,13 +24,13 @@ spec:
               value: all
           volumeMounts:
             - name: device-plugin
-              mountPath: /var/lib/kubelet/device-plugins
+              mountPath: /var/lib/edged/device-plugins
             - name: localtime
               mountPath: /etc/localtime
       volumes:
         - name: device-plugin
           hostPath:
-            path: /var/lib/kubelet/device-plugins
+            path: /var/lib/edged/device-plugins
         - name: localtime
           hostPath:
             path: /etc/localtime
