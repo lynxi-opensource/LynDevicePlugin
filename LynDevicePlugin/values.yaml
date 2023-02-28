@@ -9,6 +9,10 @@ devicePlugin:
     lynxi.com: lynxi-k8s-device-plugin
   nodeSelector:
     lynxi.com/apu.present: "true"
+  tolerations:
+    - key: node-role.kubernetes.io/edge
+      operator: Exists
+      effect: NoSchedule
 
 lynxiExporter:
   enable: true
@@ -21,30 +25,10 @@ lynxiExporter:
     lynxi.com: lynxi-exporter
   nodeSelector:
     lynxi.com/apu.present: "true"
-
-devicePluginHS110K8S:
-  enable: true
-  namespace: project-lynxi
-  name: lynxi-k8s-device-plugin-hs110-k8s
-  image: lynxidocker/lynxi-k8s-device-plugin-hs110-k8s:1.2.0
-  imagePullPolicy: Always
-  restartPolicy: Always
-  labels:
-    lynxi.com: lynxi-k8s-device-plugin-hs110-k8s
-  nodeSelector:
-    lynxi.com/type: "hs110-k8s"
-
-lynxiExporterHS110K8S:
-  enable: true
-  namespace: project-lynxi
-  name: lynxi-exporter-hs110-k8s
-  image: lynxidocker/lynxi-exporter-hs110-k8s:1.2.0
-  imagePullPolicy: Always
-  restartPolicy: Always
-  labels:
-    lynxi.com: lynxi-exporter
-  nodeSelector:
-    lynxi.com/type: "hs110-k8s"
+  tolerations:
+    - key: node-role.kubernetes.io/edge
+      operator: Exists
+      effect: NoSchedule
 
 lynxiExporterService:
   enable: true

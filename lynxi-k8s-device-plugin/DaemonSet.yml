@@ -2,7 +2,6 @@ kind: DaemonSet
 apiVersion: apps/v1
 metadata:
   name: lynxi-k8s-device-plugin
-  namespace: project-system
   labels:
     lynxi.com: lynxi-k8s-device-plugin
 spec:
@@ -16,7 +15,7 @@ spec:
     spec:
       containers:
         - name: lynxi-k8s-device-plugin
-          image: "lynxidocker/lynxi-k8s-device-plugin:0.1.0"
+          image: "lynxidocker/lynxi-k8s-device-plugin-hs110-k8s:1.2.0"
           imagePullPolicy: Always
           env:
             - name: LYNXI_VISIBLE_DEVICES
@@ -29,5 +28,3 @@ spec:
           hostPath:
             path: /var/lib/kubelet/device-plugins
       restartPolicy: Always
-      nodeSelector:
-        lynxi.com: apu
