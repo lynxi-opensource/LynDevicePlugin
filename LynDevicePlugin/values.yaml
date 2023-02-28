@@ -22,37 +22,29 @@ lynxiExporter:
   nodeSelector:
     lynxi.com/apu.present: "true"
 
-devicePluginHS110Kubeedge:
+devicePluginHS110K8S:
   enable: true
   namespace: project-lynxi
-  name: lynxi-k8s-device-plugin-hs110-kubeedge
-  image: lynxidocker/lynxi-k8s-device-plugin-hs110-kubeedge:1.2.0
+  name: lynxi-k8s-device-plugin-hs110-k8s
+  image: lynxidocker/lynxi-k8s-device-plugin-hs110-k8s:1.2.0
   imagePullPolicy: Always
   restartPolicy: Always
   labels:
-    lynxi.com: lynxi-k8s-device-plugin-hs110-kubeedge
+    lynxi.com: lynxi-k8s-device-plugin-hs110-k8s
   nodeSelector:
-    lynxi.com/type: "hs110-kubeedge"
-  tolerations:
-    - key: node-role.kubernetes.io/edge
-      operator: Exists
-      effect: NoSchedule
+    lynxi.com/type: "hs110-k8s"
 
-lynxiExporterHS110Kubeedge:
+lynxiExporterHS110K8S:
   enable: true
   namespace: project-lynxi
-  name: lynxi-exporter-hs110-kubeedge
-  image: lynxidocker/lynxi-exporter-hs110-kubeedge:1.2.0
+  name: lynxi-exporter-hs110-k8s
+  image: lynxidocker/lynxi-exporter-hs110-k8s:1.2.0
   imagePullPolicy: Always
   restartPolicy: Always
   labels:
     lynxi.com: lynxi-exporter
   nodeSelector:
-    lynxi.com/type: "hs110-kubeedge"
-  tolerations:
-    - key: node-role.kubernetes.io/edge
-      operator: Exists
-      effect: NoSchedule
+    lynxi.com/type: "hs110-k8s"
 
 lynxiExporterService:
   enable: true
