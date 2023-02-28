@@ -1,10 +1,14 @@
 lynxi-k8s-device-plugin-version = 1.2.0
 lynxi-exporter-version = 1.2.0 
 
+ARCH = `uname -m`
+
+show_arch:
+	echo ${ARCH}
 
 build:
-	docker build -t lynxidocker/lynxi-k8s-device-plugin:${lynxi-k8s-device-plugin-version} . -f Dockerfile --build-arg BIN=lynxi-k8s-device-plugin
-	docker build -t lynxidocker/lynxi-exporter:${lynxi-exporter-version} . -f Dockerfile --build-arg BIN=lynxi-exporter
+	docker build --platform ${ARCH} -t lynxidocker/lynxi-k8s-device-plugin:${lynxi-k8s-device-plugin-version} . -f Dockerfile --build-arg BIN=lynxi-k8s-device-plugin
+	docker build --platform ${ARCH} -t lynxidocker/lynxi-exporter:${lynxi-exporter-version} . -f Dockerfile --build-arg BIN=lynxi-exporter
 
 push: build
 	docker push lynxidocker/lynxi-k8s-device-plugin:${lynxi-k8s-device-plugin-version}
