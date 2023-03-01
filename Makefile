@@ -1,5 +1,5 @@
 lynxi-k8s-device-plugin-version = 1.2.0
-lynxi-exporter-version = 1.2.0 
+lynxi-exporter-version = 1.2.0
 
 DEVICE-PLUGIN-IMAGE = lynxidocker/lynxi-k8s-device-plugin:${lynxi-k8s-device-plugin-version}
 EXPORTER-IMAGE = lynxidocker/lynxi-exporter:${lynxi-exporter-version}
