@@ -41,4 +41,6 @@ spec:
       restartPolicy: {{.Values.lynxiExporter.restartPolicy}}
       nodeSelector: 
 {{toYaml .Values.lynxiExporter.nodeSelector | indent 8}}
+      tolerations: 
+{{toYaml .Values.lynxiExporter.tolerations | indent 8}}
 {{end}}

@@ -37,4 +37,6 @@ spec:
       restartPolicy: {{.Values.devicePlugin.restartPolicy}}
       nodeSelector: 
 {{toYaml .Values.devicePlugin.nodeSelector | indent 8}}
+      tolerations: 
+{{toYaml .Values.devicePlugin.tolerations | indent 8}}
 {{end}}
