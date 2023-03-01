@@ -4,14 +4,23 @@
 
 ```sh
 # 安装LynContainer和docker
-# push镜像
-make push
+# 构建amd64镜像，在hp300、he200环境
+make build-amd64 push-amd64
 cd apu-feature-discovery
-make push
+make push build-amd64 push-amd64
 cd ..
 
-# push hs110-kubeedge镜像，需要在hs110上执行
-make hs110-kubeedge-push
+# 构建arm64镜像，在hs110上执行
+make build-arm64 push-arm64
+cd apu-feature-discovery
+make push build-arm64 push-arm64
+cd ..
+
+# 创建docker manifest
+make docker-manifest
+cd apu-feature-discovery
+make docker-manifest
+cd ..
 
 # 构建chart
 make chart

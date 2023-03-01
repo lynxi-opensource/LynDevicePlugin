@@ -36,8 +36,17 @@ chart:
 	mkdir release -p
 	cd release && helm package ../LynDevicePlugin
 
+namespace:
+	kubectl create namespace device-plugin
+
+example:
+	kubectl apply -f example.yml
+
 install:
 	helm install -n device-plugin lynxi-device-plugin release/LynDevicePlugin-${lynxi-k8s-device-plugin-version}.tgz
+
+install-no-service-monitor:
+	helm install -n device-plugin --set lynxiExporterServiceMonitor.enable=false lynxi-device-plugin release/LynDevicePlugin-${lynxi-k8s-device-plugin-version}.tgz
 
 upgrade:
 	helm upgrade -n device-plugin lynxi-device-plugin release/LynDevicePlugin-${lynxi-k8s-device-plugin-version}.tgz

@@ -1,0 +1,23 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: example-sdk
+spec:
+  selector:
+    matchLabels:
+      app: example-sdk
+  template:
+    metadata:
+      labels:
+        app: example-sdk
+    spec:
+      containers:
+        - name: example-sdk
+          image: lynxidocker/lynsdk-ubuntu18.04-hm100-arm64:1.9.0
+          command:
+            - "lynxi-smi"
+          args:
+            - "watch"
+          resources:
+            limits:
+              lynxi.com/device: "1"
