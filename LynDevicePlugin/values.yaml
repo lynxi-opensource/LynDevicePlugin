@@ -60,7 +60,7 @@ apu-feature-discovery:
     # Specifies whether this namespace should be created or not
     create: true
   image:
-    repository: lynxidocker/apu-feature-discovery
+    repository: lynxidocker/apu-feature-discovery:1.2.0
     pullPolicy: IfNotPresent
   tolerations:
     - key: node-role.kubernetes.io/edge
