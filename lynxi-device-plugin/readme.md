@@ -1,8 +1,8 @@
-# 1. lynxi-k8s-device-plugin
+# 1. lynxi-device-plugin
 
 实现lynxi设备在k8s的注册.
 
-- [1. lynxi-k8s-device-plugin](#1-lynxi-k8s-device-plugin)
+- [1. lynxi-device-plugin](#1-lynxi-device-plugin)
   - [1.1. 使用方法](#11-使用方法)
     - [1.1.1. 安装device-plugin](#111-安装device-plugin)
       - [1.1.1.1. 前置条件](#1111-前置条件)

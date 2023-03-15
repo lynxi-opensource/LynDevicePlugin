@@ -8,7 +8,7 @@ import (
 	"strconv"
 	"time"
 
-	"lyndeviceplugin/lynxi-k8s-device-plugin/allocator"
+	"lyndeviceplugin/lynxi-device-plugin/allocator"
 	"lyndeviceplugin/smi"
 
 	pluginapi "k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"

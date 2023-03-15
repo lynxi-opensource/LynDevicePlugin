@@ -1,21 +1,21 @@
 kind: DaemonSet
 apiVersion: apps/v1
 metadata:
-  name: lynxi-k8s-device-plugin
+  name: lynxi-device-plugin
   labels:
-    lynxi.com: lynxi-k8s-device-plugin
+    lynxi.com: lynxi-device-plugin
 spec:
   selector:
     matchLabels:
-      lynxi.com: lynxi-k8s-device-plugin
+      lynxi.com: lynxi-device-plugin
   template:
     metadata:
       labels:
-        lynxi.com: lynxi-k8s-device-plugin
+        lynxi.com: lynxi-device-plugin
     spec:
       containers:
-        - name: lynxi-k8s-device-plugin
-          image: "lynxidocker/lynxi-k8s-device-plugin-hs110-k8s:1.2.0"
+        - name: lynxi-device-plugin
+          image: "lynxidocker/lynxi-device-plugin-hs110-k8s:1.2.0"
           imagePullPolicy: Always
           env:
             - name: LYNXI_VISIBLE_DEVICES

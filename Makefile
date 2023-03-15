@@ -1,11 +1,11 @@
-lynxi-k8s-device-plugin-version = 1.2.0
-lynxi-exporter-version = 1.2.0
+lynxi-device-plugin-version = 1.3.0
+lynxi-exporter-version = 1.3.0
 
-DEVICE-PLUGIN-IMAGE = lynxidocker/lynxi-k8s-device-plugin:${lynxi-k8s-device-plugin-version}
+DEVICE-PLUGIN-IMAGE = lynxidocker/lynxi-device-plugin:${lynxi-device-plugin-version}
 EXPORTER-IMAGE = lynxidocker/lynxi-exporter:${lynxi-exporter-version}
 
 build-amd64:
-	docker build -t ${DEVICE-PLUGIN-IMAGE}-amd64 . -f Dockerfile --build-arg BIN=lynxi-k8s-device-plugin
+	docker build -t ${DEVICE-PLUGIN-IMAGE}-amd64 . -f Dockerfile --build-arg BIN=lynxi-device-plugin
 	docker build -t ${EXPORTER-IMAGE}-amd64 . -f Dockerfile --build-arg BIN=lynxi-exporter
 
 push-amd64:
@@ -13,7 +13,7 @@ push-amd64:
 	docker push ${EXPORTER-IMAGE}-amd64
 
 build-arm64:
-	docker build -t ${DEVICE-PLUGIN-IMAGE}-arm64 . -f Dockerfile --build-arg BIN=lynxi-k8s-device-plugin
+	docker build -t ${DEVICE-PLUGIN-IMAGE}-arm64 . -f Dockerfile --build-arg BIN=lynxi-device-plugin
 	docker build -t ${EXPORTER-IMAGE}-arm64 . -f Dockerfile --build-arg BIN=lynxi-exporter
 
 push-arm64:
@@ -43,13 +43,13 @@ example:
 	kubectl apply -f example.yml
 
 install:
-	helm install -n device-plugin lynxi-device-plugin release/LynDevicePlugin-${lynxi-k8s-device-plugin-version}.tgz
+	helm install -n device-plugin lynxi-device-plugin release/LynDevicePlugin-${lynxi-device-plugin-version}.tgz
 
 install-no-service-monitor:
-	helm install -n device-plugin --set lynxiExporterServiceMonitor.enable=false lynxi-device-plugin release/LynDevicePlugin-${lynxi-k8s-device-plugin-version}.tgz
+	helm install -n device-plugin --set lynxiExporterServiceMonitor.enable=false lynxi-device-plugin release/LynDevicePlugin-${lynxi-device-plugin-version}.tgz
 
 upgrade:
-	helm upgrade -n device-plugin lynxi-device-plugin release/LynDevicePlugin-${lynxi-k8s-device-plugin-version}.tgz
+	helm upgrade -n device-plugin lynxi-device-plugin release/LynDevicePlugin-${lynxi-device-plugin-version}.tgz
 
 uninstall:
 	helm uninstall -n device-plugin lynxi-device-plugin

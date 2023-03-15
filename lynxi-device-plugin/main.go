@@ -4,9 +4,9 @@ import (
 	"log"
 	"time"
 
-	"lyndeviceplugin/lynxi-k8s-device-plugin/allocator"
-	"lyndeviceplugin/lynxi-k8s-device-plugin/server"
-	"lyndeviceplugin/lynxi-k8s-device-plugin/service"
+	"lyndeviceplugin/lynxi-device-plugin/allocator"
+	"lyndeviceplugin/lynxi-device-plugin/server"
+	"lyndeviceplugin/lynxi-device-plugin/service"
 	"lyndeviceplugin/smi"
 )
 

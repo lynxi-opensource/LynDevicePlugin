@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"lyndeviceplugin/lynxi-k8s-device-plugin/allocator"
+	"lyndeviceplugin/lynxi-device-plugin/allocator"
 	"lyndeviceplugin/smi"
 
 	"github.com/stretchr/testify/assert"

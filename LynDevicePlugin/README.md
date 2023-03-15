@@ -1,9 +1,9 @@
 # LynDevicePlugin
 
-一个用于安装apu-feature-discovery, lynxi-k8s-device-plugin, lynxi-exporter的helm chart.
+一个用于安装apu-feature-discovery, lynxi-device-plugin, lynxi-exporter的helm chart.
 
 - `apu-feature-discovery`：自动发现设备
-- `lynxi-k8s-device-plugin`：用于对接lynxi设备和k8s集群
+- `lynxi-device-plugin`：用于对接lynxi设备和k8s集群
 - `lynxi-exporter`：提供Prometheus格式的数据
 - 可选的Prometheus-operator自定义资源
   - `lynxi-expoter-service`：lynxi-expoter的service

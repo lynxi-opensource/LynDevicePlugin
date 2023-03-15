@@ -1,6 +1,6 @@
 apiVersion: v2
 name: LynDevicePlugin
-description: A helm chart for install lynxi-k8s-device-plugin, lynxi-expoter.
+description: A helm chart for install lynxi-device-plugin, lynxi-expoter.
 
 # A chart can be either an 'application' or a 'library' chart.
 #

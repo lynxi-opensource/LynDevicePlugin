@@ -79,7 +79,7 @@ func NewDeviceRecorder(smi smi.SMI, timeout time.Duration) *DeviceRecorder {
 		}, deviceMetricLabels),
 		lynxiBoardPower: newGaugeVec(prometheus.GaugeOpts{
 			Name: "lynxi_board_power",
-			Help: "The power of the board with unit mW",
+			Help: "The power of the board with unit mW. HM100 is unsupported, and the value is always 0",
 		}, boardLabels),
 		smi:     smi,
 		timeout: timeout,

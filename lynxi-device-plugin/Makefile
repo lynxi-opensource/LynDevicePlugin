@@ -1,6 +1,6 @@
 REPO=lynxidocker
 VERSION=0.2.1
-IMG=$(REPO)/lynxi-k8s-device-plugin:$(VERSION)
+IMG=$(REPO)/lynxi-device-plugin:$(VERSION)
 
 build: 
 	docker build -t $(IMG) .
@@ -20,7 +20,7 @@ replace: push
 force_replace: push 
 	kubectl replace -f DaemonSet.yml --force
 
-MAIN_PKG=lyndeviceplugin/lynxi-k8s-device-plugin
+MAIN_PKG=lyndeviceplugin/lynxi-device-plugin
 PKGS=$(MAIN_PKG) $(MAIN_PKG)/allocator $(MAIN_PKG)/server $(MAIN_PKG)/service
 
 test:
