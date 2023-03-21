@@ -9,10 +9,6 @@ devicePlugin:
     lynxi.com: lynxi-device-plugin
   nodeSelector:
     lynxi.com/apu.present: "true"
-  tolerations:
-    - key: node-role.kubernetes.io/edge
-      operator: Exists
-      effect: NoSchedule
 
 lynxiExporter:
   enable: true
@@ -25,10 +21,6 @@ lynxiExporter:
     lynxi.com: lynxi-exporter
   nodeSelector:
     lynxi.com/apu.present: "true"
-  tolerations:
-    - key: node-role.kubernetes.io/edge
-      operator: Exists
-      effect: NoSchedule
 
 lynxiExporterService:
   enable: true
@@ -62,7 +54,3 @@ apu-feature-discovery:
   image:
     repository: lynxidocker/apu-feature-discovery:1.2.0
     pullPolicy: IfNotPresent
-  tolerations:
-    - key: node-role.kubernetes.io/edge
-      operator: Exists
-      effect: NoSchedule
