@@ -15,6 +15,13 @@ spec:
       labels:
 {{toYaml .Values.devicePlugin.labels | indent 8}}
     spec:
+      initContainers:
+        - name: check-environment
+          image: ubuntu:18.04
+          command: ['lynxi-smi']
+          env:
+            - name: LYNXI_VISIBLE_DEVICES
+              value: all
       containers:
         - name: {{.Values.devicePlugin.name}}
           image: {{.Values.devicePlugin.image}}

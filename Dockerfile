@@ -1,4 +1,3 @@
-
 FROM golang:latest as builder
 
 ENV LYNXI_VISIBLE_DEVICES=all
@@ -6,13 +5,13 @@ RUN go env -w GOPROXY=https://goproxy.cn,direct
 WORKDIR /work
 COPY go.mod go.mod
 RUN go mod download
-COPY . .
-RUN go build -o lynxi-device-plugin lyndeviceplugin/lynxi-device-plugin
-RUN go build -o lynxi-exporter lyndeviceplugin/lynxi-exporter
+COPY ${BIN} ${BIN}
+ARG BIN
+RUN go build -o ${BIN} lyndeviceplugin/${BIN}
 
 FROM ubuntu:18.04
-ARG BIN
 
 WORKDIR /work
+ARG BIN
 COPY --from=builder /work/${BIN}/${BIN} main
 CMD [ "./main" ]

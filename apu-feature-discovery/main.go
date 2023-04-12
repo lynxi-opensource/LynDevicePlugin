@@ -115,6 +115,8 @@ func getAPULabels(lynxipci LynxiPCI) (map[string]string, error) {
 	labels := make(map[string]string)
 	if len(devices) > 0 {
 		labels["lynxi.com/apu.present"] = "true"
+	} else {
+		labels["lynxi.com/apu.present"] = "false"
 	}
 	return labels, nil
 }

@@ -2,7 +2,7 @@ devicePlugin:
   enable: true
   namespace: project-lynxi
   name: lynxi-device-plugin
-  image: lynxidocker/lynxi-device-plugin:1.3.0
+  image: lynxidocker/lynxi-device-plugin:1.4.0
   imagePullPolicy: Always
   restartPolicy: Always
   labels:
@@ -14,7 +14,7 @@ lynxiExporter:
   enable: true
   namespace: project-lynxi
   name: lynxi-exporter
-  image: lynxidocker/lynxi-exporter:1.3.0
+  image: lynxidocker/lynxi-exporter:1.4.0
   imagePullPolicy: Always
   restartPolicy: Always
   labels:
@@ -52,5 +52,5 @@ apu-feature-discovery:
     # Specifies whether this namespace should be created or not
     create: true
   image:
-    repository: lynxidocker/apu-feature-discovery:1.2.0
+    repository: lynxidocker/apu-feature-discovery:1.4.0
     pullPolicy: IfNotPresent

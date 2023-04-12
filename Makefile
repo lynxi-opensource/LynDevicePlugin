@@ -1,35 +1,39 @@
-lynxi-device-plugin-version = 1.3.0
-lynxi-exporter-version = 1.3.0
-
-DEVICE-PLUGIN-IMAGE = lynxidocker/lynxi-device-plugin:${lynxi-device-plugin-version}
-EXPORTER-IMAGE = lynxidocker/lynxi-exporter:${lynxi-exporter-version}
+version = 1.4.0
+targets = lynxi-device-plugin lynxi-exporter
 
 build-amd64:
-	docker build -t ${DEVICE-PLUGIN-IMAGE}-amd64 . -f Dockerfile --build-arg BIN=lynxi-device-plugin
-	docker build -t ${EXPORTER-IMAGE}-amd64 . -f Dockerfile --build-arg BIN=lynxi-exporter
+	@for target in $(targets); do \
+        docker build -t lynxidocker/$$target:$(version)-amd64 . -f Dockerfile --build-arg BIN=$$target; \
+    done
+	cd apu-feature-discovery && make build-amd64
 
 push-amd64:
-	docker push ${DEVICE-PLUGIN-IMAGE}-amd64
-	docker push ${EXPORTER-IMAGE}-amd64
+	@for target in $(targets); do \
+		docker push lynxidocker/$$target:$(version)-amd64; \
+    done
+	cd apu-feature-discovery && make push-amd64
 
 build-arm64:
-	docker build -t ${DEVICE-PLUGIN-IMAGE}-arm64 . -f Dockerfile --build-arg BIN=lynxi-device-plugin
-	docker build -t ${EXPORTER-IMAGE}-arm64 . -f Dockerfile --build-arg BIN=lynxi-exporter
+	@for target in $(targets); do \
+        docker build -t lynxidocker/$$target:$(version)-arm64 . -f Dockerfile --build-arg BIN=$$target; \
+    done
+	cd apu-feature-discovery && make build-arm64
 
 push-arm64:
-	docker push ${DEVICE-PLUGIN-IMAGE}-arm64
-	docker push ${EXPORTER-IMAGE}-arm64
+	@for target in $(targets); do \
+		docker push lynxidocker/$$target:$(version)-arm64; \
+    done
+	cd apu-feature-discovery && make push-arm64
 
 docker-manifest:
-	docker manifest create ${DEVICE-PLUGIN-IMAGE} ${DEVICE-PLUGIN-IMAGE}-amd64 ${DEVICE-PLUGIN-IMAGE}-arm64
-	docker manifest annotate ${DEVICE-PLUGIN-IMAGE} ${DEVICE-PLUGIN-IMAGE}-amd64 --os linux --arch amd64
-	docker manifest annotate ${DEVICE-PLUGIN-IMAGE} ${DEVICE-PLUGIN-IMAGE}-arm64 --os linux --arch arm64
-	docker manifest push ${DEVICE-PLUGIN-IMAGE}
-
-	docker manifest create ${EXPORTER-IMAGE} ${EXPORTER-IMAGE}-amd64 ${EXPORTER-IMAGE}-arm64
-	docker manifest annotate ${EXPORTER-IMAGE} ${EXPORTER-IMAGE}-amd64 --os linux --arch amd64
-	docker manifest annotate ${EXPORTER-IMAGE} ${EXPORTER-IMAGE}-arm64 --os linux --arch arm64
-	docker manifest push ${EXPORTER-IMAGE}
+	@for target in $(targets); do \
+		image = lynxidocker/$$target:$(version); \
+		docker manifest create ${image} ${image}-amd64 ${image}-arm64; \
+		docker manifest annotate ${image} ${image}-amd64 --os linux --arch amd64; \
+		docker manifest annotate ${image} ${image}-arm64 --os linux --arch arm64; \
+		docker manifest push ${image}; \
+    done
+	cd apu-feature-discovery && make docker-manifest
 
 
 chart:
@@ -43,13 +47,13 @@ example:
 	kubectl apply -f example.yml
 
 install:
-	helm install -n device-plugin lynxi-device-plugin release/LynDevicePlugin-${lynxi-device-plugin-version}.tgz
+	helm install -n device-plugin lynxi-device-plugin release/LynDevicePlugin-${version}.tgz
 
 install-no-service-monitor:
-	helm install -n device-plugin --set lynxiExporterServiceMonitor.enable=false lynxi-device-plugin release/LynDevicePlugin-${lynxi-device-plugin-version}.tgz
+	helm install -n device-plugin --set lynxiExporterServiceMonitor.enable=false lynxi-device-plugin release/LynDevicePlugin-${version}.tgz
 
 upgrade:
-	helm upgrade -n device-plugin lynxi-device-plugin release/LynDevicePlugin-${lynxi-device-plugin-version}.tgz
+	helm upgrade -n device-plugin lynxi-device-plugin release/LynDevicePlugin-${version}.tgz
 
 uninstall:
 	helm uninstall -n device-plugin lynxi-device-plugin

@@ -5,7 +5,7 @@ IMAGE_PUSH_CMD ?= docker push
 CONTAINER_RUN_CMD ?= docker run
 BASE_IMAGE_FULL ?= ubuntu:18.04
 
-VERSION ?= 1.2.0
+VERSION ?= 1.4.0
 IMAGE_REGISTRY ?= lynxidocker
 IMAGE_TAG_NAME ?= $(VERSION)
 

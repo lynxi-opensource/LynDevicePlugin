@@ -15,6 +15,13 @@ spec:
       labels:
 {{toYaml .Values.lynxiExporter.labels | indent 8}}
     spec:
+      initContainers:
+        - name: check-environment
+          image: ubuntu:18.04
+          command: ['lynxi-smi']
+          env:
+            - name: LYNXI_VISIBLE_DEVICES
+              value: all
       containers:
         - name: {{.Values.lynxiExporter.name}}
           image: {{.Values.lynxiExporter.image}}

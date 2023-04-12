@@ -4,11 +4,60 @@ package smi_c
 /*
 #cgo LDFLAGS: -lLYNSMICLIENTCOMM
 #include <lyn_smi.h>
+
+typedef struct
+{
+    char boardProductName[ARRAY_MAX_LEN];
+    char boardBrand[ARRAY_MAX_LEN];
+    char boardFirmwareVersion[ARRAY_MAX_LEN];
+    char boardProductNumber[ARRAY_MAX_LEN];
+    char boardSerialNumber[ARRAY_MAX_LEN];
+    uint32_t boardId;
+    uint32_t boardChipCount;
+    float boardPowerDraw;
+    float boardPowerLimit;
+    float boardVoltage;
+
+    char deviceName[ARRAY_MAX_LEN];
+    char deviceUuid[ARRAY_MAX_LEN];
+    uint64_t deviceApuClockFrequency;
+    uint64_t deviceApuClockFrequencyLimit;
+    uint64_t deviceArmClockFrequency;
+    uint64_t deviceArmClockFrequencyLimit;
+    uint64_t deviceMemClockFrequency;
+    uint64_t deviceMemClockFrequencyLimit;
+    uint64_t deviceMemoryUsed;
+    uint64_t deviceMemoryTotal;
+    int32_t deviceTemperatureCurrent;
+    int32_t deviceTemperatureSlowdown;
+    int32_t deviceTemperatureLimit;
+    uint32_t deviceApuUsageRate;
+    uint32_t deviceArmUsageRate;
+    uint32_t deviceVicUsageRate;
+    uint32_t deviceIpeUsageRate;
+    uint32_t deviceEccStat;
+    uint32_t deviceDdrErrorCount;
+    uint32_t deviceDdrNoErrorCount;
+    float deviceVoltage;
+
+    uint32_t processCount;
+    uint32_t pid[PROCESS_COUNT_LIMIT];
+    char processName[PROCESS_COUNT_LIMIT][PROCESS_NAME_LEN];
+    uint64_t processUseMemory[PROCESS_COUNT_LIMIT];
+} lynDevicePropertiesOld_t;
 */
 import "C"
 import (
+	"context"
+	"errors"
+	"fmt"
+	"log"
 	"os"
+	"os/exec"
+	"regexp"
 	"strconv"
+	"time"
+	"unsafe"
 )
 
 type Error C.lynError_t
@@ -37,6 +86,63 @@ func GetDeviceCountByDir() (int, error) {
 		}
 	}
 	return cnt, err
+}
+
+type DriverVersion [3]int
+
+func (v DriverVersion) String() string {
+	return fmt.Sprintf("%d.%d.%d", v[0], v[1], v[2])
+}
+
+func (v DriverVersion) LessThan(other DriverVersion) bool {
+	for i := range v {
+		if v[i] == other[i] {
+			continue
+		}
+		return v[i] < other[i]
+	}
+	return false
+}
+
+func NewDriverVersionFromBytes(bytes []byte) (ret DriverVersion, err error) {
+	r, err := regexp.Compile(`(\d+)\.(\d+)\.(\d+)`)
+	if err != nil {
+		return
+	}
+	matches := r.FindSubmatch(bytes)
+	if len(matches) != 4 {
+		err = errors.New("match version number failed from: " + string(bytes))
+		return
+	}
+	for i, v := range matches[1:] {
+		ret[i], err = strconv.Atoi(string(v))
+		if err != nil {
+			return
+		}
+	}
+	return
+}
+
+func NewDriverVersionFromSMIBin() (ret DriverVersion, err error) {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
+	defer cancel()
+	output, err := exec.CommandContext(ctx, "lynxi-smi", "-v").Output()
+	if err != nil {
+		return
+	}
+	return NewDriverVersionFromBytes(output)
+}
+
+var useOldStructBefore DriverVersion = DriverVersion{1, 11, 0}
+
+var isUseOldStruct bool
+
+func init() {
+	current_version, err := NewDriverVersionFromSMIBin()
+	if err != nil {
+		log.Fatal(err)
+	}
+	isUseOldStruct = current_version.LessThan(useOldStructBefore)
 }
 
 func GetDeviceCount() (int, error) {
@@ -88,8 +194,43 @@ func newChipProp(raw C.lynDeviceProperties_t) DeviceProperties {
 	}
 }
 
-func GetDeviceProperties(devID int32) (DeviceProperties, error) {
+func newChipPropOld(raw C.lynDevicePropertiesOld_t) DeviceProperties {
+	return DeviceProperties{
+		BoardProperties: BoardProperties{
+			ProductName:  C.GoString(&raw.boardProductName[0]),
+			SerialNumber: C.GoString(&raw.boardSerialNumber[0]),
+			BoardID:      uint32(raw.boardId),
+			ChipCount:    uint32(raw.boardChipCount),
+			PowerDraw:    float32(raw.boardPowerDraw),
+		},
+
+		Name:         C.GoString(&raw.deviceName[0]),
+		UUID:         C.GoString(&raw.deviceUuid[0]),
+		MemUsed:      uint64(raw.deviceMemoryUsed),
+		MemTotal:     uint64(raw.deviceMemoryTotal),
+		CurrentTemp:  int32(raw.deviceTemperatureCurrent),
+		ApuUsageRate: uint32(raw.deviceApuUsageRate),
+		ArmUsageRate: uint32(raw.deviceArmUsageRate),
+		VicUsageRate: uint32(raw.deviceVicUsageRate),
+		IpeUsageRate: uint32(raw.deviceIpeUsageRate),
+	}
+}
+
+func GetDevicePropertiesNew(devID int32) (DeviceProperties, error) {
 	var raw C.lynDeviceProperties_t
 	err := check(C.lynGetDeviceProperties(C.int32_t(devID), &raw))
 	return newChipProp(raw), err
+}
+
+func GetDevicePropertiesOld(devID int32) (DeviceProperties, error) {
+	var raw C.lynDevicePropertiesOld_t
+	err := check(C.lynGetDeviceProperties(C.int32_t(devID), (*C.lynDeviceProperties_t)(unsafe.Pointer(&raw))))
+	return newChipPropOld(raw), err
+}
+
+func GetDeviceProperties(devID int32) (DeviceProperties, error) {
+	if isUseOldStruct {
+		return GetDevicePropertiesOld(devID)
+	}
+	return GetDevicePropertiesNew(devID)
 }

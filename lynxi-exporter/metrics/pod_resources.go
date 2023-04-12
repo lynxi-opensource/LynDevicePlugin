@@ -4,7 +4,9 @@ import (
 	"context"
 	"errors"
 	"log"
+	"lyndeviceplugin/smi"
 	"net"
+	"strconv"
 	"strings"
 	"time"
 
@@ -21,23 +23,35 @@ type PodContainerRecorder struct {
 	lynxiPodContainerDeviceCount *prometheus.GaugeVec
 	timeout                      time.Duration
 	deviceID2UUID                map[string]string
+	smi                          smi.SMI
 }
 
 // NewStatesRecorder 构造一个StatesRecorder并初始化指标
-func NewPodContainerRecorder(timeout time.Duration, deviceID2UUID map[string]string) *PodContainerRecorder {
+func NewPodContainerRecorder(timeout time.Duration, smi smi.SMI) *PodContainerRecorder {
 	ret := &PodContainerRecorder{
 		lynxiPodContainerDeviceCount: promauto.NewGaugeVec(prometheus.GaugeOpts{
 			Name: "lynxi_pod_container_device_count",
 			Help: "The device ids and number of devices for each pod container.",
 		}, labelsForPodContainer()),
 		timeout:       timeout,
-		deviceID2UUID: deviceID2UUID,
+		deviceID2UUID: make(map[string]string),
+		smi:           smi,
 	}
 	return ret
 }
 
 func labelsForPodContainer() []string {
 	return []string{"owner_pod", "owner_container", "owner_namespace", "device_ids", "uuids"}
+}
+
+func (m PodContainerRecorder) updateUUIDs() {
+	deviceInfos, err := m.smi.GetDevices()
+	if err != nil {
+		GlobalRecorder.logError(err)
+	}
+	for _, deviceInfo := range deviceInfos {
+		m.deviceID2UUID[strconv.Itoa(deviceInfo.ID)] = deviceInfo.UUID
+	}
 }
 
 func (m PodContainerRecorder) getUUIDs(deviceIDs []string) (ret []string) {
@@ -64,6 +78,7 @@ func (m *PodContainerRecorder) Record() error {
 	client := podresources.NewPodResourcesListerClient(conn)
 	ticker := time.NewTicker(m.timeout)
 	for range ticker.C {
+		m.updateUUIDs()
 		resp, err := client.List(context.Background(), &podresources.ListPodResourcesRequest{})
 		if err != nil {
 			GlobalRecorder.logError(err)
