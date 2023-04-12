@@ -27,11 +27,10 @@ push-arm64:
 
 docker-manifest:
 	@for target in $(targets); do \
-		image = lynxidocker/$$target:$(version); \
-		docker manifest create ${image} ${image}-amd64 ${image}-arm64; \
-		docker manifest annotate ${image} ${image}-amd64 --os linux --arch amd64; \
-		docker manifest annotate ${image} ${image}-arm64 --os linux --arch arm64; \
-		docker manifest push ${image}; \
+		docker manifest create --amend lynxidocker/$$target:$(version) lynxidocker/$$target:$(version)-amd64 lynxidocker/$$target:$(version)-arm64; \
+		docker manifest annotate lynxidocker/$$target:$(version) lynxidocker/$$target:$(version)-amd64 --os linux --arch amd64; \
+		docker manifest annotate lynxidocker/$$target:$(version) lynxidocker/$$target:$(version)-arm64 --os linux --arch arm64; \
+		docker manifest push lynxidocker/$$target:$(version); \
     done
 	cd apu-feature-discovery && make docker-manifest
 
