@@ -7,7 +7,7 @@ build-amd64:
     done
 	cd apu-feature-discovery && make build-amd64
 
-push-amd64:
+push-amd64: build-amd64
 	@for target in $(targets); do \
 		docker push lynxidocker/$$target:$(version)-amd64; \
     done
@@ -19,7 +19,7 @@ build-arm64:
     done
 	cd apu-feature-discovery && make build-arm64
 
-push-arm64:
+push-arm64: build-arm64
 	@for target in $(targets); do \
 		docker push lynxidocker/$$target:$(version)-arm64; \
     done
@@ -27,7 +27,8 @@ push-arm64:
 
 docker-manifest:
 	@for target in $(targets); do \
-		docker manifest create --amend lynxidocker/$$target:$(version) lynxidocker/$$target:$(version)-amd64 lynxidocker/$$target:$(version)-arm64; \
+		docker manifest rm lynxidocker/$$target:$(version); \
+		docker manifest create lynxidocker/$$target:$(version) lynxidocker/$$target:$(version)-amd64 lynxidocker/$$target:$(version)-arm64; \
 		docker manifest annotate lynxidocker/$$target:$(version) lynxidocker/$$target:$(version)-amd64 --os linux --arch amd64; \
 		docker manifest annotate lynxidocker/$$target:$(version) lynxidocker/$$target:$(version)-arm64 --os linux --arch arm64; \
 		docker manifest push lynxidocker/$$target:$(version); \

@@ -18,7 +18,7 @@ build-amd64:
 	    --build-arg BASE_IMAGE_FULL=$(BASE_IMAGE_FULL) \
 	    -t $(IMAGE_TAG)-amd64 .
 
-push-amd64: 
+push-amd64: build-amd64
 	$(IMAGE_PUSH_CMD) $(IMAGE_TAG)-amd64
 
 build-arm64: 
@@ -26,11 +26,12 @@ build-arm64:
 	    --build-arg BASE_IMAGE_FULL=$(BASE_IMAGE_FULL) \
 	    -t $(IMAGE_TAG)-arm64 .
 
-push-arm64: 
+push-arm64: build-arm64
 	$(IMAGE_PUSH_CMD) $(IMAGE_TAG)-arm64
 
 docker-manifest:
-	docker manifest create --amend $(IMAGE_TAG) $(IMAGE_TAG)-amd64 $(IMAGE_TAG)-arm64
+	docker manifest rm $(IMAGE_TAG)
+	docker manifest create $(IMAGE_TAG) $(IMAGE_TAG)-amd64 $(IMAGE_TAG)-arm64
 	docker manifest annotate $(IMAGE_TAG) $(IMAGE_TAG)-amd64 --os linux --arch amd64
 	docker manifest annotate $(IMAGE_TAG) $(IMAGE_TAG)-arm64 --os linux --arch arm64
 	docker manifest push $(IMAGE_TAG)
