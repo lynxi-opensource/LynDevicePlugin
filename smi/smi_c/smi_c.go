@@ -51,7 +51,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
 	"os"
 	"os/exec"
 	"regexp"
@@ -124,7 +123,7 @@ func NewDriverVersionFromBytes(bytes []byte) (ret DriverVersion, err error) {
 }
 
 func NewDriverVersionFromSMIBin() (ret DriverVersion, err error) {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 	defer cancel()
 	output, err := exec.CommandContext(ctx, "lynxi-smi", "-v").Output()
 	if err != nil {
@@ -140,7 +139,7 @@ var isUseOldStruct bool
 func init() {
 	current_version, err := NewDriverVersionFromSMIBin()
 	if err != nil {
-		log.Fatal(err)
+		panic(err)
 	}
 	isUseOldStruct = current_version.LessThan(useOldStructBefore)
 }
