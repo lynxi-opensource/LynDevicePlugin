@@ -18,10 +18,11 @@ spec:
       initContainers:
         - name: check-environment
           image: ubuntu:18.04
-          command: ['lynxi-smi']
+          command: ["/bin/sh"]
+          args: ["-c", "if command -v lynxi-smi >/dev/null 2>&1; then echo 'exists lynxi-smi'; else echo 'no exists lynxi-smi, sleep infinity'; sleep infinity; fi"]
           env:
             - name: LYNXI_VISIBLE_DEVICES
-              value: all
+              value: none
       containers:
         - name: {{.Values.devicePlugin.name}}
           image: {{.Values.devicePlugin.image}}
