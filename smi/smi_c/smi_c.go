@@ -132,7 +132,7 @@ func NewDriverVersionFromSMIBin() (ret DriverVersion, err error) {
 	return NewDriverVersionFromBytes(output)
 }
 
-var useOldStructBefore DriverVersion = DriverVersion{1, 11, 0}
+var useOldStructBefore DriverVersion = DriverVersion{1, 10, 2}
 
 var isUseOldStruct bool
 
