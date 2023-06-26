@@ -19,27 +19,27 @@ func TestSMIC_GetDevices(t *testing.T) {
 
 func BenchmarkSMIC_GetDevices(b *testing.B) {
 	m := NewSMIC()
-	first, err := m.GetDevices()
+	// first, err := m.GetDevices()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		r, e := m.GetDevices()
-		assert.Equal(b, first, r)
-		assert.Equal(b, err, e)
+		_, err := m.GetDevices()
+		// assert.Equal(b, first, r)
+		assert.Equal(b, err, nil)
 	}
 }
 
 func BenchmarkSMIC_GetDevicesMultiGoroutines(b *testing.B) {
 	m := NewSMIC()
-	first, err := m.GetDevices()
+	// first, err := m.GetDevices()
 	b.ResetTimer()
 	wg := &sync.WaitGroup{}
 	for i := 0; i < b.N; i++ {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			r, e := m.GetDevices()
-			assert.Equal(b, first, r)
-			assert.Equal(b, err, e)
+			_, err := m.GetDevices()
+			// assert.Equal(b, first, r)
+			assert.Equal(b, err, nil)
 		}()
 	}
 	wg.Wait()

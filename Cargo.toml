@@ -1,0 +1,5 @@
+[workspace]
+members = [
+    "lynsmi",
+    "lynsmi-service"
+]

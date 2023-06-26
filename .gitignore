@@ -1,3 +1,5 @@
 /release/
 /.vscode/
 /sdk_image/
+/target/
+/Cargo.lock

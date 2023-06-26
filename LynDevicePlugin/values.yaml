@@ -44,7 +44,7 @@ lynxiExporterServiceMonitor:
   namespaceSelector:
     matchNames:
       - project-lynxi
-  interval: 5s
+  interval: 1s
 
 apu-feature-discovery:
   namespace:
