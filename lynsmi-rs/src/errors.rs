@@ -30,7 +30,7 @@ pub enum Error {
 }
 
 impl Error {
-    pub(crate) fn check(code: i32) -> Result<(), Self> {
+    pub(crate) fn check(code: i32) -> Result<()> {
         if code == 0 {
             Ok(())
         } else {
@@ -38,3 +38,5 @@ impl Error {
         }
     }
 }
+
+pub type Result<T> = std::result::Result<T, Error>;

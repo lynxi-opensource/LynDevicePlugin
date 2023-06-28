@@ -1,6 +1,19 @@
 // Package smi_c 提供smiInterfaceExp.h中定义的函数的go版本
 package smi_c
 
+import (
+	"context"
+	"errors"
+	"fmt"
+	types "lyndeviceplugin/lynsmi-interface"
+	"os"
+	"os/exec"
+	"regexp"
+	"strconv"
+	"time"
+	"unsafe"
+)
+
 /*
 #cgo LDFLAGS: -lLYNSMICLIENTCOMM
 #include <lyn_smi.h>
@@ -47,17 +60,6 @@ typedef struct
 } lynDevicePropertiesOld_t;
 */
 import "C"
-import (
-	"context"
-	"errors"
-	"fmt"
-	"os"
-	"os/exec"
-	"regexp"
-	"strconv"
-	"time"
-	"unsafe"
-)
 
 type Error C.lynError_t
 
@@ -171,63 +173,67 @@ type DeviceProperties struct {
 	IpeUsageRate uint32
 }
 
-func newChipProp(raw C.lynDeviceProperties_t) DeviceProperties {
-	return DeviceProperties{
-		BoardProperties: BoardProperties{
+func newChipProp(raw C.lynDeviceProperties_t) types.Props {
+	return types.Props{
+		Board: types.BoardProps{
 			ProductName:  C.GoString(&raw.boardProductName[0]),
 			SerialNumber: C.GoString(&raw.boardSerialNumber[0]),
-			BoardID:      uint32(raw.boardId),
+			Brand:        C.GoString(&raw.boardBrand[0]),
+			ID:           uint32(raw.boardId),
 			ChipCount:    uint32(raw.boardChipCount),
 			PowerDraw:    float32(raw.boardPowerDraw),
 		},
-
-		Name:         C.GoString(&raw.deviceName[0]),
-		UUID:         C.GoString(&raw.deviceUuid[0]),
-		MemUsed:      uint64(raw.deviceMemoryUsed),
-		MemTotal:     uint64(raw.deviceMemoryTotal),
-		CurrentTemp:  int32(raw.deviceTemperatureCurrent),
-		ApuUsageRate: uint32(raw.deviceApuUsageRate),
-		ArmUsageRate: uint32(raw.deviceArmUsageRate),
-		VicUsageRate: uint32(raw.deviceVicUsageRate),
-		IpeUsageRate: uint32(raw.deviceIpeUsageRate),
+		Device: types.DeviceProps{
+			Name:        C.GoString(&raw.deviceName[0]),
+			UUID:        C.GoString(&raw.deviceUuid[0]),
+			MemoryUsed:  uint64(raw.deviceMemoryUsed),
+			MemoryTotal: uint64(raw.deviceMemoryTotal),
+			Temperature: int32(raw.deviceTemperatureCurrent),
+			ApuUsage:    uint32(raw.deviceApuUsageRate),
+			ArmUsage:    uint32(raw.deviceArmUsageRate),
+			VicUsage:    uint32(raw.deviceVicUsageRate),
+			IpeUsage:    uint32(raw.deviceIpeUsageRate),
+		},
 	}
 }
 
-func newChipPropOld(raw C.lynDevicePropertiesOld_t) DeviceProperties {
-	return DeviceProperties{
-		BoardProperties: BoardProperties{
+func newChipPropOld(raw C.lynDevicePropertiesOld_t) types.Props {
+	return types.Props{
+		Board: types.BoardProps{
 			ProductName:  C.GoString(&raw.boardProductName[0]),
 			SerialNumber: C.GoString(&raw.boardSerialNumber[0]),
-			BoardID:      uint32(raw.boardId),
+			Brand:        C.GoString(&raw.boardBrand[0]),
+			ID:           uint32(raw.boardId),
 			ChipCount:    uint32(raw.boardChipCount),
 			PowerDraw:    float32(raw.boardPowerDraw),
 		},
-
-		Name:         C.GoString(&raw.deviceName[0]),
-		UUID:         C.GoString(&raw.deviceUuid[0]),
-		MemUsed:      uint64(raw.deviceMemoryUsed),
-		MemTotal:     uint64(raw.deviceMemoryTotal),
-		CurrentTemp:  int32(raw.deviceTemperatureCurrent),
-		ApuUsageRate: uint32(raw.deviceApuUsageRate),
-		ArmUsageRate: uint32(raw.deviceArmUsageRate),
-		VicUsageRate: uint32(raw.deviceVicUsageRate),
-		IpeUsageRate: uint32(raw.deviceIpeUsageRate),
+		Device: types.DeviceProps{
+			Name:        C.GoString(&raw.deviceName[0]),
+			UUID:        C.GoString(&raw.deviceUuid[0]),
+			MemoryUsed:  uint64(raw.deviceMemoryUsed),
+			MemoryTotal: uint64(raw.deviceMemoryTotal),
+			Temperature: int32(raw.deviceTemperatureCurrent),
+			ApuUsage:    uint32(raw.deviceApuUsageRate),
+			ArmUsage:    uint32(raw.deviceArmUsageRate),
+			VicUsage:    uint32(raw.deviceVicUsageRate),
+			IpeUsage:    uint32(raw.deviceIpeUsageRate),
+		},
 	}
 }
 
-func GetDevicePropertiesNew(devID int32) (DeviceProperties, error) {
+func GetDevicePropertiesNew(devID int32) (types.Props, error) {
 	var raw C.lynDeviceProperties_t
 	err := check(C.lynGetDeviceProperties(C.int32_t(devID), &raw))
 	return newChipProp(raw), err
 }
 
-func GetDevicePropertiesOld(devID int32) (DeviceProperties, error) {
+func GetDevicePropertiesOld(devID int32) (types.Props, error) {
 	var raw C.lynDevicePropertiesOld_t
 	err := check(C.lynGetDeviceProperties(C.int32_t(devID), (*C.lynDeviceProperties_t)(unsafe.Pointer(&raw))))
 	return newChipPropOld(raw), err
 }
 
-func GetDeviceProperties(devID int32) (DeviceProperties, error) {
+func GetDeviceProperties(devID int32) (types.Props, error) {
 	if isUseOldStruct {
 		return GetDevicePropertiesOld(devID)
 	}

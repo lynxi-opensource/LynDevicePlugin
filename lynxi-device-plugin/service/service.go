@@ -8,8 +8,8 @@ import (
 	"strconv"
 	"time"
 
+	smi "lyndeviceplugin/lynsmi-interface"
 	"lyndeviceplugin/lynxi-device-plugin/allocator"
-	"lyndeviceplugin/smi"
 
 	pluginapi "k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
 )
@@ -19,7 +19,7 @@ var _ pluginapi.DevicePluginServer = &Service{}
 // DeviceGetter 描述获取设备状态的接口，smi.SMI的子集
 type DeviceGetter interface {
 	// GetDevices 获取所有设备
-	GetDevices() ([]smi.Device, error)
+	GetDevices() (smi.AllProps, error)
 }
 
 // Service 实现了pluginapi.DevicePluginServer，提供grpc接口实现
@@ -52,11 +52,11 @@ func isHealthy(isOn bool) string {
 	return pluginapi.Unhealthy
 }
 
-func smiDevicesToPluginDevices(devices []smi.Device) (ret []*pluginapi.Device) {
-	for _, d := range devices {
+func smiDevicesToPluginDevices(devices smi.AllProps) (ret []*pluginapi.Device) {
+	for i, d := range devices {
 		ret = append(ret, &pluginapi.Device{
-			ID:     strconv.Itoa(d.ID),
-			Health: isHealthy(d.IsOn),
+			ID:     strconv.Itoa(i),
+			Health: isHealthy(d != nil),
 		})
 	}
 	return

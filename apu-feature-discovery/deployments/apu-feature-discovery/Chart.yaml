@@ -1,8 +1,0 @@
-apiVersion: v2
-name: apu-feature-discovery
-type: application
-description: A Helm chart for apu-feature-discovery on Kubernetes
-version: "0.1.1"
-appVersion: "0.1.1"
-kubeVersion: ">= 1.10.0-0"
-

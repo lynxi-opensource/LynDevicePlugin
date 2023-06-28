@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 	"log"
-	"lyndeviceplugin/smi"
+	smi "lyndeviceplugin/lynsmi-interface"
 	"net"
 	"strconv"
 	"strings"
@@ -49,8 +49,8 @@ func (m PodContainerRecorder) updateUUIDs() {
 	if err != nil {
 		GlobalRecorder.logError(err)
 	}
-	for _, deviceInfo := range deviceInfos {
-		m.deviceID2UUID[strconv.Itoa(deviceInfo.ID)] = deviceInfo.UUID
+	for i, deviceInfo := range deviceInfos {
+		m.deviceID2UUID[strconv.Itoa(i)] = deviceInfo.Device.UUID
 	}
 }
 

@@ -1,4 +1,4 @@
-use crate::errors::Error;
+use crate::errors::*;
 use libloading::{Library, Symbol};
 use serde::{Deserialize, Serialize};
 use std::{
@@ -100,14 +100,14 @@ pub struct Lib(Library);
 impl Lib {
     const DEFAULT_FILENAME: &str = "/usr/lib/libLYNSMICLIENTCOMM.so";
 
-    pub fn new<P>(filename: P) -> Result<Self, Error>
+    pub fn new<P>(filename: P) -> Result<Self>
     where
         P: AsRef<OsStr>,
     {
         unsafe { Ok(Lib(Library::new(filename)?)) }
     }
 
-    pub fn try_default() -> Result<Self, Error> {
+    pub fn try_default() -> Result<Self> {
         Self::new(Self::DEFAULT_FILENAME)
     }
 }
@@ -119,14 +119,14 @@ pub struct Symbols<'lib> {
     driver_version: DriverVersion,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Props {
     board: BoardProps,
     device: DeviceProps,
 }
 
 impl<'lib> Symbols<'lib> {
-    pub fn new(lib: &'lib Lib) -> Result<Self, Error> {
+    pub fn new(lib: &'lib Lib) -> Result<Self> {
         unsafe {
             Ok(Self {
                 lib_get_device_cnt: lib.0.get(b"lynGetDeviceCountSmi")?,
@@ -136,13 +136,13 @@ impl<'lib> Symbols<'lib> {
             })
         }
     }
-    pub fn get_device_cnt(&self) -> Result<usize, Error> {
+    pub fn get_device_cnt(&self) -> Result<usize> {
         let mut cnt = 0;
         Error::check((self.lib_get_device_cnt)(&mut cnt))?;
         Ok(cnt as usize)
     }
 
-    fn get_props_v1(&self, id: usize) -> Result<Props, Error> {
+    fn get_props_v1(&self, id: usize) -> Result<Props> {
         let mut c_device_prop: lynDeviceProperties_t_v1 = unsafe { zeroed() };
         Error::check((self.lib_get_device_props_v1)(
             id as i32,
@@ -150,28 +150,28 @@ impl<'lib> Symbols<'lib> {
         ))?;
         Ok(Props {
             board: BoardProps {
-                board_product_name: string_from_c(c_device_prop.boardProductName.as_ref())?,
-                board_brand: string_from_c(c_device_prop.boardBrand.as_ref())?,
-                board_serial_number: string_from_c(c_device_prop.boardSerialNumber.as_ref())?,
-                board_id: c_device_prop.boardId,
-                board_chip_count: c_device_prop.boardChipCount,
-                board_power_draw: c_device_prop.boardPowerDraw,
+                product_name: string_from_c(c_device_prop.boardProductName.as_ref())?,
+                brand: string_from_c(c_device_prop.boardBrand.as_ref())?,
+                serial_number: string_from_c(c_device_prop.boardSerialNumber.as_ref())?,
+                id: c_device_prop.boardId,
+                chip_count: c_device_prop.boardChipCount,
+                power_draw: c_device_prop.boardPowerDraw,
             },
             device: DeviceProps {
-                device_name: string_from_c(c_device_prop.deviceName.as_ref())?,
-                device_uuid: string_from_c(c_device_prop.deviceUuid.as_ref())?,
-                device_memory_used: c_device_prop.deviceMemoryUsed,
-                device_memory_total: c_device_prop.deviceMemoryTotal,
-                device_temperature_current: c_device_prop.deviceTemperatureCurrent,
-                device_apu_usage_rate: c_device_prop.deviceApuUsageRate,
-                device_arm_usage_rate: c_device_prop.deviceArmUsageRate,
-                device_vic_usage_rate: c_device_prop.deviceVicUsageRate,
-                device_ipe_usage_rate: c_device_prop.deviceIpeUsageRate,
+                name: string_from_c(c_device_prop.deviceName.as_ref())?,
+                uuid: string_from_c(c_device_prop.deviceUuid.as_ref())?,
+                memory_used: c_device_prop.deviceMemoryUsed,
+                memory_total: c_device_prop.deviceMemoryTotal,
+                temperature: c_device_prop.deviceTemperatureCurrent,
+                apu_usage: c_device_prop.deviceApuUsageRate,
+                arm_usage: c_device_prop.deviceArmUsageRate,
+                vic_usage: c_device_prop.deviceVicUsageRate,
+                ipe_usage: c_device_prop.deviceIpeUsageRate,
             },
         })
     }
 
-    fn get_props_v2(&self, id: usize) -> Result<Props, Error> {
+    fn get_props_v2(&self, id: usize) -> Result<Props> {
         let mut c_device_prop: lynDeviceProperties_t_v2 = unsafe { zeroed() };
         Error::check((self.lib_get_device_props_v2)(
             id as i32,
@@ -179,28 +179,28 @@ impl<'lib> Symbols<'lib> {
         ))?;
         Ok(Props {
             board: BoardProps {
-                board_product_name: string_from_c(c_device_prop.boardProductName.as_ref())?,
-                board_brand: string_from_c(c_device_prop.boardBrand.as_ref())?,
-                board_serial_number: string_from_c(c_device_prop.boardSerialNumber.as_ref())?,
-                board_id: c_device_prop.boardId,
-                board_chip_count: c_device_prop.boardChipCount,
-                board_power_draw: c_device_prop.boardPowerDraw,
+                product_name: string_from_c(c_device_prop.boardProductName.as_ref())?,
+                brand: string_from_c(c_device_prop.boardBrand.as_ref())?,
+                serial_number: string_from_c(c_device_prop.boardSerialNumber.as_ref())?,
+                id: c_device_prop.boardId,
+                chip_count: c_device_prop.boardChipCount,
+                power_draw: c_device_prop.boardPowerDraw,
             },
             device: DeviceProps {
-                device_name: string_from_c(c_device_prop.deviceName.as_ref())?,
-                device_uuid: string_from_c(c_device_prop.deviceUuid.as_ref())?,
-                device_memory_used: c_device_prop.deviceMemoryUsed,
-                device_memory_total: c_device_prop.deviceMemoryTotal,
-                device_temperature_current: c_device_prop.deviceTemperatureCurrent,
-                device_apu_usage_rate: c_device_prop.deviceApuUsageRate,
-                device_arm_usage_rate: c_device_prop.deviceArmUsageRate,
-                device_vic_usage_rate: c_device_prop.deviceVicUsageRate,
-                device_ipe_usage_rate: c_device_prop.deviceIpeUsageRate,
+                name: string_from_c(c_device_prop.deviceName.as_ref())?,
+                uuid: string_from_c(c_device_prop.deviceUuid.as_ref())?,
+                memory_used: c_device_prop.deviceMemoryUsed,
+                memory_total: c_device_prop.deviceMemoryTotal,
+                temperature: c_device_prop.deviceTemperatureCurrent,
+                apu_usage: c_device_prop.deviceApuUsageRate,
+                arm_usage: c_device_prop.deviceArmUsageRate,
+                vic_usage: c_device_prop.deviceVicUsageRate,
+                ipe_usage: c_device_prop.deviceIpeUsageRate,
             },
         })
     }
 
-    pub fn get_props(&self, id: usize) -> Result<Props, Error> {
+    pub fn get_props(&self, id: usize) -> Result<Props> {
         match &self.driver_version {
             v if v < &V1_10_2 => self.get_props_v1(id),
             v if v >= &V1_10_2 => self.get_props_v2(id),
@@ -210,31 +210,31 @@ impl<'lib> Symbols<'lib> {
 }
 
 #[non_exhaustive]
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct BoardProps {
-    pub board_product_name: String,
-    pub board_brand: String,
-    pub board_serial_number: String,
-    pub board_id: u32,
-    pub board_chip_count: u32,
-    pub board_power_draw: f32,
+    pub product_name: String,
+    pub brand: String,
+    pub serial_number: String,
+    pub id: u32,
+    pub chip_count: u32,
+    pub power_draw: f32,
 }
 
 #[non_exhaustive]
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct DeviceProps {
-    pub device_name: String,
-    pub device_uuid: String,
-    pub device_memory_used: u64,
-    pub device_memory_total: u64,
-    pub device_temperature_current: i32,
-    pub device_apu_usage_rate: u32,
-    pub device_arm_usage_rate: u32,
-    pub device_vic_usage_rate: u32,
-    pub device_ipe_usage_rate: u32,
+    pub name: String,
+    pub uuid: String,
+    pub memory_used: u64,
+    pub memory_total: u64,
+    pub temperature: i32,
+    pub apu_usage: u32,
+    pub arm_usage: u32,
+    pub vic_usage: u32,
+    pub ipe_usage: u32,
 }
 
-fn string_from_c(data: &[i8]) -> Result<String, Error> {
+fn string_from_c(data: &[i8]) -> Result<String> {
     unsafe { Ok(CStr::from_ptr(data.as_ptr()).to_str()?.to_owned()) }
 }
 
@@ -244,7 +244,7 @@ const V1_10_2: DriverVersion = DriverVersion(1, 10, 2);
 struct DriverVersion(usize, usize, usize);
 
 impl DriverVersion {
-    pub fn local() -> Result<Self, Error> {
+    pub fn local() -> Result<Self> {
         let output = Command::new("lynxi-smi").arg("-v").output()?;
         const PREFIX: &[u8; 13] = b"SMI version: ";
         let mut version_strs = output

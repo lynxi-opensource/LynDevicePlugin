@@ -3,15 +3,14 @@ package service
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"strconv"
 	"sync"
 	"testing"
 	"time"
 
+	smi "lyndeviceplugin/lynsmi-interface"
 	"lyndeviceplugin/lynxi-device-plugin/allocator"
-	"lyndeviceplugin/smi"
 
 	"github.com/stretchr/testify/assert"
 	"google.golang.org/grpc/metadata"
@@ -21,23 +20,17 @@ import (
 var _ DeviceGetter = &smiMock{}
 
 type smiMock struct {
-	devices []smi.Device
+	devices smi.AllProps
 	mtx     sync.Mutex
 }
 
-func (m *smiMock) GetDevices() ([]smi.Device, error) {
+func (m *smiMock) GetDevices() (smi.AllProps, error) {
 	m.mtx.Lock()
 	defer m.mtx.Unlock()
-	var err error
-	for _, d := range m.devices {
-		if !d.IsOn {
-			err = errors.New("device is off")
-		}
-	}
-	return m.devices, err
+	return m.devices, nil
 }
 
-func (m *smiMock) setDevices(devices []smi.Device) {
+func (m *smiMock) setDevices(devices smi.AllProps) {
 	m.mtx.Lock()
 	defer m.mtx.Unlock()
 	m.devices = m.devices[:0]
@@ -69,7 +62,7 @@ func (m *sendMocker) Context() context.Context     { panic("unimplemented") }
 func (m *sendMocker) SendMsg(interface{}) error    { panic("unimplemented") }
 func (m *sendMocker) RecvMsg(interface{}) error    { panic("unimplemented") }
 
-func isSMIDevicesAndPluginDevicesEqual(smiDevices []smi.Device, pluginDevices []*pluginapi.Device) bool {
+func isSMIDevicesAndPluginDevicesEqual(smiDevices smi.AllProps, pluginDevices []*pluginapi.Device) bool {
 	if len(smiDevices) != len(pluginDevices) {
 		return false
 	}
@@ -79,11 +72,11 @@ func isSMIDevicesAndPluginDevicesEqual(smiDevices []smi.Device, pluginDevices []
 		}
 		return pluginapi.Unhealthy
 	}
-	for _, sd := range smiDevices {
+	for i, sd := range smiDevices {
 		found := false
 		for _, pd := range pluginDevices {
-			if pd.ID == strconv.Itoa(sd.ID) {
-				if pd.Health != isHealthy(sd.IsOn) {
+			if pd.ID == strconv.Itoa(i) {
+				if pd.Health != isHealthy(sd != nil) {
 					return false
 				}
 				found = true
@@ -100,10 +93,10 @@ func isSMIDevicesAndPluginDevicesEqual(smiDevices []smi.Device, pluginDevices []
 func TestService_ListAndWatch(t *testing.T) {
 	interval := time.Millisecond * 100
 	smm := &smiMock{}
-	var devices = []smi.Device{
-		{DeviceInfo: smi.DeviceInfo{ID: 0, IsOn: true}},
-		{DeviceInfo: smi.DeviceInfo{ID: 1, IsOn: true}},
-		{DeviceInfo: smi.DeviceInfo{ID: 2, IsOn: true}},
+	var devices = smi.AllProps{
+		&smi.Props{},
+		&smi.Props{},
+		&smi.Props{},
 	}
 	smm.setDevices(devices)
 	svc := NewService(smm, allocatorMock{}, interval)
@@ -118,7 +111,7 @@ func TestService_ListAndWatch(t *testing.T) {
 	pluginDevices := (<-respChan).Devices
 	assert.True(t, isSMIDevicesAndPluginDevicesEqual(smiDevices, pluginDevices), fmt.Sprintf("expect: %v, actual: %v", smiDevices, pluginDevices))
 	// 改变device状态
-	devices[1].IsOn = false
+	devices[1] = nil
 	smm.setDevices(devices)
 	smiDevices, _ = smm.GetDevices()
 	pluginDevices = (<-respChan).Devices

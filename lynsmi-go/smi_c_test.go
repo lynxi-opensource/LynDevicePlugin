@@ -1,4 +1,4 @@
-package smi
+package lynsmi
 
 import (
 	"sync"
@@ -8,7 +8,7 @@ import (
 )
 
 func TestSMIC_GetDevices(t *testing.T) {
-	m := NewSMIC()
+	m := New()
 	got, err := m.GetDevices()
 	assert.Nil(t, err)
 	assert.NotEmpty(t, got)
@@ -18,7 +18,7 @@ func TestSMIC_GetDevices(t *testing.T) {
 }
 
 func BenchmarkSMIC_GetDevices(b *testing.B) {
-	m := NewSMIC()
+	m := New()
 	// first, err := m.GetDevices()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -29,7 +29,7 @@ func BenchmarkSMIC_GetDevices(b *testing.B) {
 }
 
 func BenchmarkSMIC_GetDevicesMultiGoroutines(b *testing.B) {
-	m := NewSMIC()
+	m := New()
 	// first, err := m.GetDevices()
 	b.ResetTimer()
 	wg := &sync.WaitGroup{}

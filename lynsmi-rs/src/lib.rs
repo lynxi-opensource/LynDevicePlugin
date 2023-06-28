@@ -1,8 +1,12 @@
 pub mod errors;
 pub mod library;
+
+pub use errors::*;
 pub use library::*;
 
 use rayon::{prelude::*, ThreadPool};
+
+pub type AllProps = Vec<Result<Props>>;
 
 pub struct SMI<'a> {
     symbols: Symbols<'a>,
@@ -11,7 +15,7 @@ pub struct SMI<'a> {
 }
 
 impl<'a> SMI<'a> {
-    pub fn new(lib: &'a Lib) -> Result<Self, errors::Error> {
+    pub fn new(lib: &'a Lib) -> Result<Self> {
         let symbols = Symbols::new(lib)?;
         let device_cnt = symbols.get_device_cnt()?;
 
@@ -26,7 +30,7 @@ impl<'a> SMI<'a> {
         })
     }
 
-    pub fn get_devices(&self, results: &mut Vec<Result<Props, errors::Error>>) {
+    pub fn get_devices(&self, results: &mut AllProps) {
         self.thread_pool.install(|| {
             (0..self.device_cnt)
                 .into_par_iter()

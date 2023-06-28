@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"time"
 
+	smi "lyndeviceplugin/lynsmi-service-client-go"
 	"lyndeviceplugin/lynxi-exporter/metrics"
-	"lyndeviceplugin/smi"
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
@@ -20,7 +20,10 @@ func main() {
 		log.Fatalln(gr.Record())
 	}()
 	timeout := 5 * time.Second
-	smiC := smi.NewSMIC()
+	smiC, err := smi.New("127.0.0.1:5432")
+	if err != nil {
+		log.Fatalln(err)
+	}
 
 	// new device recorder and start record
 	deviceMetrics := metrics.NewDeviceRecorder(smiC, timeout)

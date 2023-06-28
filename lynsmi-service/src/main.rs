@@ -1,54 +1,37 @@
-use lynsmi::Props;
-use lynsmi::{errors::Error as SMIError, Lib, SMI};
-use serde::Serialize;
-use tokio::io::{AsyncReadExt, AsyncWriteExt};
+use lynsmi_service::prelude::*;
 use tokio::net::TcpListener;
-use tokio::sync::broadcast;
-use tokio::task::spawn_blocking;
-
-#[derive(Debug, Clone, Serialize)]
-enum Event {
-    InitError(String),
-    AllProps(Vec<Option<Props>>),
-}
+use tracing::{info, warn};
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    let (tx, _) = broadcast::channel(10);
+    tracing_subscriber::fmt::init();
 
-    let tx_cloned = tx.clone();
-    spawn_blocking(move || match Lib::try_default() {
-        Err(e) => tx_cloned.send(Event::InitError(e.to_string())).unwrap(),
-        Ok(lib) => match SMI::new(&lib) {
-            Err(e) => tx_cloned.send(Event::InitError(e.to_string())).unwrap(),
-            Ok(smi) => loop {
-                let mut results = Vec::new();
-                smi.get_devices(&mut results);
-                tx_cloned
-                    .send(Event::AllProps(
-                        results.into_iter().map(|v| v.ok()).collect(),
-                    ))
-                    .unwrap();
-            },
-        },
-    });
+    const ADDR: &'static str = "127.0.0.1:5432";
+    info!("listen on {}", ADDR);
+    let listener = TcpListener::bind(ADDR).await?;
 
-    let listener = TcpListener::bind("127.0.0.1:8080").await?;
-
+    let smi_watcher = SMIWatcher::new().await?;
     loop {
-        let mut rx_cloned = tx.subscribe();
-        let (mut socket, _) = listener.accept().await?;
+        let (socket, addr) = listener.accept().await?;
+        let mut smi = smi_watcher.subscribe();
 
         tokio::spawn(async move {
-            while let Ok(event) = rx_cloned.recv().await {
-                let b = serde_json::to_vec(&event).unwrap();
-                async || -> _ {
-                    socket.write_all(&b).await?;
-                    socket.write_all(&[0]).await
-                }()
-                .await;
-                if let Err(e) = socket.write_all(&b).await {
-                    eprintln!("failed to write to socket; err = {:?}", e);
+            let mut conn = Connection::new(socket);
+            info!("accept client {}", addr);
+            while smi.changed().await.is_ok() {
+                let all_props: Vec<_> = smi
+                    .borrow()
+                    .iter()
+                    .map(|v| match v.as_ref() {
+                        Err(e) => {
+                            warn!("device err {:?}", e);
+                            None
+                        }
+                        Ok(v) => Some(v.to_owned()),
+                    })
+                    .collect();
+                if let Err(e) = conn.send(&all_props).await {
+                    warn!("failed to send to client; addr = {}; err = {:?}", addr, e);
                     return;
                 }
             }

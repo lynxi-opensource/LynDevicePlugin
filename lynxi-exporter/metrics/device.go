@@ -4,7 +4,7 @@ import (
 	"strconv"
 	"time"
 
-	"lyndeviceplugin/smi"
+	smi "lyndeviceplugin/lynsmi-interface"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
@@ -22,7 +22,7 @@ func newGaugeVec(opts prometheus.GaugeOpts, labels labels) gaugeVec {
 	}
 }
 
-func (m gaugeVec) set(device smi.Device, v float64) {
+func (m gaugeVec) set(device PropsWithID, v float64) {
 	m.m.WithLabelValues(m.labels.getValues(device)...).Set(v)
 }
 
@@ -107,7 +107,7 @@ var memLabels labels = append(deviceMetricLabels, labels{labelMemTotal}...)
 
 var mountTime = time.Now().Format(time.RFC3339)
 
-func (ls labels) getValues(device smi.Device) []string {
+func (ls labels) getValues(device PropsWithID) []string {
 	ret := make([]string, len(ls))
 	for i := range ls {
 		ret[i] = ls.getValue(device, i)
@@ -115,26 +115,26 @@ func (ls labels) getValues(device smi.Device) []string {
 	return ret
 }
 
-func (ls labels) getValue(device smi.Device, i int) string {
+func (ls labels) getValue(device PropsWithID, i int) string {
 	switch ls[i] {
 	case labelProductName:
-		return device.ProductName
+		return device.Board.ProductName
 	case labelManufacturer:
-		return device.Manufacturer
+		return device.Board.Brand
 	case labelMountTime:
 		return mountTime
 	case labelBoardID:
-		return strconv.Itoa(device.BoardID)
+		return strconv.Itoa(int(device.Board.ID))
 	case labelSerialNumber:
-		return device.SerialNumber
+		return device.Board.SerialNumber
 	case labelModel:
-		return device.Model
+		return device.Device.Name
 	case labelID:
 		return strconv.Itoa(device.ID)
 	case labelUUID:
-		return device.UUID
+		return device.Device.UUID
 	case labelMemTotal:
-		return strconv.Itoa(int(device.MemTotal))
+		return strconv.Itoa(int(device.Device.MemoryTotal))
 	default:
 		panic("unknown label")
 	}
@@ -151,6 +151,11 @@ func (m *DeviceRecorder) reset() {
 	m.lynxiBoardPower.reset()
 }
 
+type PropsWithID struct {
+	smi.Props
+	ID int
+}
+
 // Record 一直阻塞不会返回错误，外部通过lynxi_exporter_state或日志查看exporter的状态是否正常
 func (m *DeviceRecorder) Record() error {
 	ticker := time.NewTicker(m.timeout)
@@ -158,18 +163,19 @@ func (m *DeviceRecorder) Record() error {
 		devices, err := m.smi.GetDevices()
 		GlobalRecorder.logIfError(err)
 		m.reset()
-		for _, device := range devices {
-			if device.IsOn {
+		for i, device_ptr := range devices {
+			if device_ptr != nil {
+				device := PropsWithID{*device_ptr, i}
 				m.lynxiDeviceStates.set(device, StateOK)
-				m.lynxiDeviceMemUsed.set(device, float64(device.MemUsed))
-				m.lynxiDeviceApuUsage.set(device, float64(device.ApuUsageRate))
-				m.lynxiDeviceArmUsage.set(device, float64(device.ArmUsageRate))
-				m.lynxiDeviceVicUsage.set(device, float64(device.VicUsageRate))
-				m.lynxiDeviceIpeUsage.set(device, float64(device.IpeUsageRate))
-				m.lynxiDeviceCurrentTemp.set(device, float64(device.CurrentTemp))
-				m.lynxiBoardPower.set(device, float64(device.PowerDraw))
+				m.lynxiDeviceMemUsed.set(device, float64(device.Device.MemoryUsed))
+				m.lynxiDeviceApuUsage.set(device, float64(device.Device.ApuUsage))
+				m.lynxiDeviceArmUsage.set(device, float64(device.Device.ArmUsage))
+				m.lynxiDeviceVicUsage.set(device, float64(device.Device.VicUsage))
+				m.lynxiDeviceIpeUsage.set(device, float64(device.Device.IpeUsage))
+				m.lynxiDeviceCurrentTemp.set(device, float64(device.Device.Temperature))
+				m.lynxiBoardPower.set(device, float64(device.Board.PowerDraw))
 			} else {
-				m.lynxiDeviceStates.set(device, StateErr)
+				m.lynxiDeviceStates.set(PropsWithID{smi.Props{}, i}, StateErr)
 			}
 		}
 	}
