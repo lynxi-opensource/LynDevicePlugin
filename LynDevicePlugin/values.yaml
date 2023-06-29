@@ -12,7 +12,7 @@ lynxiExporter:
   image: lynxidocker/lynxi-exporter:1.5.0
   serviceMonitor:
     enable: true
-    interval: 0.5s
+    interval: 1s
 
 apuFeatureDiscovery:
   image: lynxidocker/apu-feature-discovery:1.5.0

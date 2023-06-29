@@ -1,3 +1,4 @@
+{{if .Values.lynxiExporter.enable}}
 kind: Service
 apiVersion: v1
 metadata:
@@ -12,4 +13,5 @@ spec:
       port: 2112
       targetPort: 2112
   selector: 
-    lynxi.com: lynxi-exporter
+    lynxi.com: lynxi-daemon-set
+{{end}}
