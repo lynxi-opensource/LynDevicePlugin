@@ -1,4 +1,5 @@
-{{if .Values.lynxiExporter.serviceMonitor.enable && .Values.lynxiExporter.enable}}
+{{if .Values.lynxiExporter.enable}}
+{{if .Values.lynxiExporter.serviceMonitor.enable}}
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
@@ -18,4 +19,5 @@ spec:
       path: /metrics
       port: http-metrics
       scheme: http
+{{end}}
 {{end}}

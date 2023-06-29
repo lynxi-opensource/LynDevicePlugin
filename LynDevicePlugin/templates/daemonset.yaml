@@ -23,35 +23,40 @@ spec:
             - name: LYNXI_VISIBLE_DEVICES
               value: none
       containers:
-        - name: lynxidocker/lynxi-smi:1.5.0
-          image: lynxi-smi
+        - name: lynsmi-service
+          image: lynxidocker/lynsmi-service:1.5.0
           imagePullPolicy: {{.Values.imagePullPolicy}}
+          env:
+            - name: LYNXI_VISIBLE_DEVICES
+              value: all
+          volumeMounts:
+            - name: localtime
+              mountPath: /etc/localtime
         - name: lynxi-device-plugin
           image: {{.Values.lynxiDevicePlugin.image}}
           imagePullPolicy: {{.Values.imagePullPolicy}}
           volumeMounts:
             - name: device-plugin
-              mountPath: /var/lib/kubelet/pod-resources/
+              mountPath: /var/lib/kubelet/device-plugins/
             - name: localtime
               mountPath: /etc/localtime
 {{if .Values.lynxiExporter.enable}}
         - name: lynxi-exporter
           image: {{.Values.lynxiExporter.image}}
           imagePullPolicy: {{.Values.imagePullPolicy}}
-          env:
-            - name: LYNXI_VISIBLE_DEVICES
-            - value: all
           ports:
             - name: http-metrics
               containerPort: 2112
               protocol: TCP
           volumeMounts:
-            - name: device-plugin
+            - name: pod-resources
               mountPath: /var/lib/kubelet/pod-resources/
             - name: localtime
               mountPath: /etc/localtime
+{{end}}
       volumes:
-        - name: device-plugin
+{{if .Values.lynxiExporter.enable}}
+        - name: pod-resources
           hostPath:
             path: /var/lib/kubelet/pod-resources/
 {{end}}

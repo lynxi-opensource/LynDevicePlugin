@@ -1,3 +1,5 @@
+version = 1.5.0
+
 build:
 	./build.sh
 

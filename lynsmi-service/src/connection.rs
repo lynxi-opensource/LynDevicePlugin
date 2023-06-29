@@ -29,7 +29,7 @@ impl Connection {
 
     #[instrument]
     pub async fn send(&mut self, data: &AllProps) -> Result<()> {
-        let b = serde_json::to_string(&data).unwrap();
+        let b = serde_json::to_string(&data)?;
         self.framed.send(b).await?;
         Ok(())
     }
