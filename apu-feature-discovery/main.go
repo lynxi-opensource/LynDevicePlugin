@@ -13,7 +13,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/LYNXI/apu-feature-discovery/apihelper"
+	"lyndeviceplugin/apu-feature-discovery/apihelper"
 )
 
 const (

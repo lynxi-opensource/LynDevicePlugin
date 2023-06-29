@@ -1,0 +1,7 @@
+FROM --platform=$TARGETPLATFORM alpine
+
+WORKDIR /work
+ARG BIN
+ARG TARGETARCH
+COPY $TARGETARCH/$BIN main
+ENTRYPOINT [ "/work/main" ]

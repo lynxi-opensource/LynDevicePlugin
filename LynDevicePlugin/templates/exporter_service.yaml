@@ -1,18 +1,15 @@
-{{if .Values.lynxiExporterService.enable}}
 kind: Service
 apiVersion: v1
 metadata:
-  name: {{.Values.lynxiExporterService.name}}
-  namespace: {{.Values.lynxiExporterService.namespace}}
+  name: lynxi-exporter-service
+  namespace: {{.Values.namespace.name}}
   labels: 
-{{toYaml .Values.lynxiExporterService.labels | indent 4}}
+    lynxi.com: lynxi-exporter-service
 spec:
-  type: {{.Values.lynxiExporterService.type}}
   ports:
     - name: http-metrics
       protocol: TCP
       port: 2112
       targetPort: 2112
   selector: 
-{{toYaml .Values.lynxiExporterService.selector | indent 4}}
-{{end}}
+    lynxi.com: lynxi-exporter

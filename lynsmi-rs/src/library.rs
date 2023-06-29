@@ -234,7 +234,7 @@ pub struct DeviceProps {
     pub ipe_usage: u32,
 }
 
-fn string_from_c(data: &[i8]) -> Result<String> {
+fn string_from_c(data: &[c_char]) -> Result<String> {
     unsafe { Ok(CStr::from_ptr(data.as_ptr()).to_str()?.to_owned()) }
 }
 
