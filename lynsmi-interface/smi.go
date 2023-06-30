@@ -35,6 +35,6 @@ type BoardProps struct {
 // SMI 是设备信息提供方必须实现的方法
 type SMI interface {
 	// GetDevices 获取设备列表
-	GetDevices() (AllProps, error)
 	Close() error
+	GetDevices() (AllProps, error)
 }

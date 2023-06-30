@@ -16,7 +16,9 @@ func startRecord(recorder metrics.Recorder, tickTime time.Duration) {
 	go func() {
 		ticker := time.NewTicker(tickTime)
 		for range ticker.C {
-			log.Fatalln(recorder.Record())
+			if err := recorder.Record(); err != nil {
+				log.Fatalln(err)
+			}
 		}
 	}()
 }

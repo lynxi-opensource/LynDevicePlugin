@@ -197,15 +197,19 @@ func concurrentExec(fns ...func()) {
 func (m *DeviceRecorder) Record() error {
 	var devices smi.AllProps
 	var id2ResOwner map[string]podresources.ResourceOwner
+	var smiErr error
+	var resErr error
 	concurrentExec(func() {
-		var err error
-		devices, err = m.smi.GetDevices()
-		GlobalRecorder.logIfError(err)
+		devices, smiErr = m.smi.GetDevices()
 	}, func() {
-		var err error
-		id2ResOwner, err = m.getResoureOwners()
-		GlobalRecorder.logIfError(err)
+		id2ResOwner, resErr = m.getResoureOwners()
 	})
+	if smiErr != nil {
+		return smiErr
+	}
+	if resErr != nil {
+		return resErr
+	}
 	m.reset()
 	for i, device_ptr := range devices {
 		id := strconv.Itoa(i)

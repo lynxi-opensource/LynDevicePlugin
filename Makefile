@@ -13,6 +13,9 @@ namespace:
 example:
 	kubectl apply -f example.yml
 
+example-uninstall:
+	kubectl delete -f example.yml
+
 install:
 	helm install -n device-plugin --set imagePullPolicy=Always lynxi-device-plugin release/LynDevicePlugin-${version}.tgz
 
@@ -27,3 +30,12 @@ uninstall:
 
 list:
 	helm list -n device-plugin
+
+service:
+	kubectl get service -n project-lynxi
+
+use_k3s: 
+	cp test_utils/k3s.yaml ~/.kube/config
+
+use_local: 
+	cp test_utils/local.yaml ~/.kube/config

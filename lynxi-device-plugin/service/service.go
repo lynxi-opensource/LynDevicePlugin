@@ -69,7 +69,7 @@ func (m *Service) ListAndWatch(_ *pluginapi.Empty, sender pluginapi.DevicePlugin
 	for {
 		devices, err := m.smi.GetDevices()
 		if err != nil {
-			log.Println("smi GetDevices err: ", err)
+			log.Fatalln("smi GetDevices err: ", err)
 		}
 		if err = sender.Send(&pluginapi.ListAndWatchResponse{Devices: smiDevicesToPluginDevices(devices)}); err != nil {
 			log.Fatalln("ListAndWatch: send to kubelet err:", err)

@@ -1,19 +1,19 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: example-sdk
+  name: example
 spec:
   selector:
     matchLabels:
-      app: example-sdk
+      app: example
   template:
     metadata:
       labels:
-        app: example-sdk
+        app: example
     spec:
       containers:
-        - name: example-sdk
-          image: lynxidocker/lynsdk-ubuntu18.04-hm100-arm64:1.9.0
+        - name: example
+          image: ubuntu:18.04
           command:
             - "lynxi-smi"
           args:
