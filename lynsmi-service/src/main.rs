@@ -6,7 +6,7 @@ use tracing::{info, warn};
 async fn main() -> anyhow::Result<()> {
     tracing_subscriber::fmt::init();
 
-    const ADDR: &'static str = "127.0.0.1:5432";
+    const ADDR: &'static str = "0.0.0.0:5432";
     info!("listen on {}", ADDR);
     let listener = TcpListener::bind(ADDR).await?;
 

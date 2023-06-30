@@ -4,7 +4,6 @@ go_targets=(lynxi-device-plugin lynxi-exporter apu-feature-discovery)
 out_dir=bin
 
 export CGO_ENABLED=0
-
 for target in ${go_targets[@]}; do
     for arch in ${archs[@]}; do
         GOOS=linux GOARCH=${arch} go build -o ${out_dir}/${arch}/${target} lyndeviceplugin/${target}

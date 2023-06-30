@@ -14,10 +14,10 @@ example:
 	kubectl apply -f example.yml
 
 install:
-	helm install -n device-plugin lynxi-device-plugin release/LynDevicePlugin-${version}.tgz
+	helm install -n device-plugin --set imagePullPolicy=Always lynxi-device-plugin release/LynDevicePlugin-${version}.tgz
 
 install-no-service-monitor:
-	helm install -n device-plugin --set lynxiExporter.serviceMonitor.enable=false lynxi-device-plugin release/LynDevicePlugin-${version}.tgz
+	helm install -n device-plugin --set imagePullPolicy=Always --set lynxiExporter.serviceMonitor.enable=false lynxi-device-plugin release/LynDevicePlugin-${version}.tgz
 
 upgrade:
 	helm upgrade -n device-plugin lynxi-device-plugin release/LynDevicePlugin-${version}.tgz
