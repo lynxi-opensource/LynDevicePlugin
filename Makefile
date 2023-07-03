@@ -34,8 +34,8 @@ list:
 service:
 	kubectl get service -n project-lynxi
 
-use_k3s: 
+use-k3s: 
 	cp test_utils/k3s.yaml ~/.kube/config
 
-use_local: 
+use-local: 
 	cp test_utils/local.yaml ~/.kube/config
