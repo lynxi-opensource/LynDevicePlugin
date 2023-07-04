@@ -1,7 +1,6 @@
 package metrics
 
 import (
-	"errors"
 	smi "lyndeviceplugin/lynsmi-interface"
 	podresources "lyndeviceplugin/lynxi-exporter/pod_resources"
 	"strconv"
@@ -42,20 +41,19 @@ func labelsForPodContainer() []string {
 func (m PodContainerRecorder) updateUUIDs() {
 	deviceInfos, err := m.smi.GetDevices()
 	if err != nil {
-		GlobalRecorder.logError(err)
+		GlobalRecorder.LogError(err)
 	}
 	for i, deviceInfo := range deviceInfos {
-		m.deviceID2UUID[strconv.Itoa(i)] = deviceInfo.Device.UUID
+		if deviceInfo != nil {
+			m.deviceID2UUID[strconv.Itoa(i)] = deviceInfo.Device.UUID
+		}
 	}
 }
 
 func (m PodContainerRecorder) getUUIDs(deviceIDs []string) (ret []string) {
 	for _, id := range deviceIDs {
-		uuid, ok := m.deviceID2UUID[id]
+		uuid := m.deviceID2UUID[id]
 		ret = append(ret, uuid)
-		if !ok {
-			GlobalRecorder.logError(errors.New("can not find a uuid for " + id))
-		}
 	}
 	return
 }
@@ -64,7 +62,7 @@ func (m *PodContainerRecorder) Record() error {
 	m.updateUUIDs()
 	resp, err := m.podRes.Get()
 	if err != nil {
-		GlobalRecorder.logError(err)
+		GlobalRecorder.LogError(err)
 		return err
 	} else {
 		m.lynxiPodContainerDeviceCount.Reset()

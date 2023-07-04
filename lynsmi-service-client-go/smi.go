@@ -4,44 +4,70 @@ import (
 	"bufio"
 	"encoding/json"
 	"net"
+	"sync"
 
 	types "lyndeviceplugin/lynsmi-interface"
-	"lyndeviceplugin/utils/singleflight"
 )
-
-type retType struct {
-	props []*types.Props
-	err   error
-}
 
 var _ types.SMI = &SMIImpl{}
 
-// SMIImpl implements the SMI interface by smiInterface.
-type SMIImpl struct {
-	reader *bufio.Reader
-	conn   net.Conn
-	sf     singleflight.Singleflight[retType]
+type propsWithID struct {
+	ID    int          `json:"id"`
+	Props *types.Props `json:"props"`
+	Err   *string      `json:"err"`
 }
 
-func New(addr string) (smi *SMIImpl, err error) {
+// SMIImpl implements the SMI interface by smiInterface.
+type SMIImpl struct {
+	conn     net.Conn
+	allProps types.AllProps
+	mtx      *sync.Mutex
+	cond     *sync.Cond
+	err      error
+}
+
+func New(addr string, devicesErrorHandler func(int, string)) (smi *SMIImpl, err error) {
 	conn, err := net.Dial("tcp", addr)
 	if err != nil {
 		return
 	}
-	return &SMIImpl{bufio.NewReader(conn), conn, singleflight.New[retType]()}, nil
+	mtx := &sync.Mutex{}
+	cond := sync.NewCond(mtx)
+	smi = &SMIImpl{conn, make(types.AllProps, 0), mtx, cond, nil}
+	go func() {
+		reader := bufio.NewReader(conn)
+		for {
+			b, err := reader.ReadBytes(0)
+			if err != nil {
+				smi.err = err
+				return
+			}
+			var ret propsWithID
+			err = json.Unmarshal(b[:len(b)-1], &ret)
+			if err != nil {
+				smi.err = err
+				return
+			}
+			mtx.Lock()
+			if ret.ID >= len(smi.allProps) {
+				smi.allProps = append(smi.allProps, make(types.AllProps, ret.ID+1-len(smi.allProps))...)
+			}
+			smi.allProps[ret.ID] = ret.Props
+			if ret.Err != nil {
+				devicesErrorHandler(ret.ID, *ret.Err)
+			}
+			smi.cond.Broadcast()
+			mtx.Unlock()
+		}
+	}()
+	return smi, nil
 }
 
 func (m *SMIImpl) GetDevices() (types.AllProps, error) {
-	ret := m.sf.Fly(func() retType {
-		b, err := m.reader.ReadBytes(0)
-		if err != nil {
-			return retType{nil, err}
-		}
-		var ret types.AllProps
-		err = json.Unmarshal(b[:len(b)-1], &ret)
-		return retType{ret, err}
-	})
-	return ret.props, ret.err
+	m.mtx.Lock()
+	defer m.mtx.Unlock()
+	m.cond.Wait()
+	return m.allProps, m.err
 }
 
 func (m *SMIImpl) Close() error {

@@ -1,5 +1,6 @@
 use crate::errors::*;
 use libloading::{Library, Symbol};
+use regex::Regex;
 use serde::{Deserialize, Serialize};
 use std::{
     ffi::{c_char, CStr, OsStr},
@@ -112,6 +113,7 @@ impl Lib {
     }
 }
 
+#[derive(Clone)]
 pub struct Symbols<'lib> {
     lib_get_device_cnt: Symbol<'lib, fn(&mut i32) -> i32>,
     lib_get_device_props_v1: Symbol<'lib, fn(i32, &mut lynDeviceProperties_t_v1) -> i32>,
@@ -240,23 +242,21 @@ fn string_from_c(data: &[c_char]) -> Result<String> {
 
 const V1_10_2: DriverVersion = DriverVersion(1, 10, 2);
 
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 struct DriverVersion(usize, usize, usize);
 
 impl DriverVersion {
     pub fn local() -> Result<Self> {
+        let re = Regex::new(r"SMI version: (\d+)\.(\d+)\.(\d+)").unwrap();
         let output = Command::new("lynxi-smi").arg("-v").output()?;
-        const PREFIX: &[u8; 13] = b"SMI version: ";
-        let mut version_strs = output
-            .stdout
-            .strip_prefix(PREFIX)
-            .ok_or(Error::StripVersionPrefix)?
-            .split(|v| v == &b'.')
-            .map(|v| String::from_utf8(v.to_owned()).map(|v| v.trim().parse::<usize>()));
+        let output = String::from_utf8(output.stdout)?;
+        let captures = re
+            .captures(&output)
+            .ok_or_else(|| Error::NoVersionInfo(output.clone()))?;
         Ok(Self(
-            version_strs.next().ok_or(Error::SplitVersion)???,
-            version_strs.next().ok_or(Error::SplitVersion)???,
-            version_strs.next().ok_or(Error::SplitVersion)???,
+            captures[1].parse::<usize>()?,
+            captures[2].parse::<usize>()?,
+            captures[3].parse::<usize>()?,
         ))
     }
 }
@@ -277,5 +277,11 @@ mod tests {
         let lib = Lib::try_default().unwrap();
         let symbols = Symbols::new(&lib).unwrap();
         println!("{:?}", symbols.get_props(0).unwrap())
+    }
+
+    #[test]
+    fn test_get_driver_version() {
+        let version = DriverVersion::local().unwrap();
+        println!("{:?}", version);
     }
 }

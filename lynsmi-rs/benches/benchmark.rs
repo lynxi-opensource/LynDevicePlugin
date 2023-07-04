@@ -1,5 +1,6 @@
 use criterion::{criterion_group, criterion_main, Criterion};
 use lynsmi::*;
+use rayon::prelude::*;
 
 fn get_device_props_benchmark(c: &mut Criterion) {
     let lib = Lib::try_default().unwrap();
@@ -13,14 +14,16 @@ fn get_device_props_benchmark(c: &mut Criterion) {
 
 fn get_devices_benchmark(c: &mut Criterion) {
     let lib = Lib::try_default().unwrap();
-    let smi = SMI::new(&lib).unwrap();
+    let smi = Symbols::new(&lib).unwrap();
+    let cnt = smi.get_device_cnt().unwrap();
 
     let mut group = c.benchmark_group("lynsmi");
     group.sample_size(10);
     group.bench_function("get_devices", |b| {
         b.iter(|| {
-            let results = &mut Vec::new();
-            smi.get_devices(results);
+            (0..cnt).into_par_iter().for_each(|id| {
+                smi.get_props(id).unwrap();
+            });
         })
     });
     group.finish()

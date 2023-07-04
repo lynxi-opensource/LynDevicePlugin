@@ -1,71 +1,46 @@
-use std::sync::{Arc, Condvar, Mutex};
-
-use lynsmi::{AllProps, Lib, SMI};
-use tokio::{
-    sync::{oneshot, watch},
-    task::{spawn_blocking, JoinError, JoinHandle},
+use std::{
+    sync::{Arc, Condvar, Mutex},
+    thread,
 };
 
-pub struct SMIWatcher {
-    rx: watch::Receiver<Arc<AllProps>>,
-    notify: Arc<(Mutex<bool>, Condvar)>,
-    h: JoinHandle<()>,
-}
+use lynsmi::{Lib, Props, Result, Symbols};
+use tokio::sync::broadcast::Sender;
+use tracing::{info, warn};
 
-impl SMIWatcher {
-    pub async fn new() -> lynsmi::Result<Self> {
-        let (tx, rx) = watch::channel(Arc::new(AllProps::new()));
-        let notify = Arc::new((Mutex::new(false), Condvar::new()));
-        let notify_clone = notify.clone();
-        let (init_tx, init_rx) = oneshot::channel::<lynsmi::Result<()>>();
-        let h = spawn_blocking(move || match Lib::try_default() {
-            Err(e) => {
-                init_tx.send(Err(e)).unwrap();
-                return;
-            }
-            Ok(lib) => match SMI::new(&lib) {
-                Err(e) => {
-                    init_tx.send(Err(e)).unwrap();
-                    return;
-                }
-                Ok(smi) => {
-                    init_tx.send(Ok(())).unwrap();
-                    let (lock, cvar) = &*notify_clone;
-                    loop {
-                        {
-                            let mut quit = lock.lock().unwrap();
+pub type Data = Arc<(usize, lynsmi::Result<Props>)>;
+
+pub async fn watch(tx: Sender<Data>, notify: Arc<(Mutex<bool>, Condvar)>) -> Result<()> {
+    let lib = Lib::try_default()?;
+    let smi = Symbols::new(&lib)?;
+    let device_cnt = smi.get_device_cnt()?;
+    thread::scope(|s| {
+        for id in 0..device_cnt {
+            let smi = smi.clone();
+            let tx = tx.clone();
+            let notify = notify.clone();
+            s.spawn(move || {
+                let (lock, cvar) = &*notify;
+                loop {
+                    {
+                        let mut quit = lock.lock().unwrap();
+                        if *quit {
+                            break;
+                        }
+                        while tx.receiver_count() == 0 {
+                            info!("device {} waiting receiver", id);
+                            quit = cvar.wait(quit).unwrap();
                             if *quit {
                                 break;
                             }
-                            while tx.receiver_count() < 2 {
-                                quit = cvar.wait(quit).unwrap();
-                                if *quit {
-                                    break;
-                                }
-                            }
                         }
-                        let mut results = Vec::new();
-                        smi.get_devices(&mut results);
-                        tx.send(Arc::new(results)).unwrap();
                     }
+                    let result = smi.get_props(id);
+                    if let Err(_) = tx.send(Arc::new((id, result))) {
+                        warn!("SendError");
+                    };
                 }
-            },
-        });
-        init_rx.await.unwrap()?;
-        Ok(Self { rx, notify, h })
-    }
-
-    pub fn subscribe(&self) -> watch::Receiver<Arc<AllProps>> {
-        let rx = self.rx.clone();
-        let __ = self.notify.0.lock().unwrap();
-        self.notify.1.notify_one();
-        rx
-    }
-
-    pub async fn close(self) -> std::result::Result<(), JoinError> {
-        let mut quit = self.notify.0.lock().unwrap();
-        *quit = true;
-        self.notify.1.notify_one();
-        self.h.await
-    }
+            });
+        }
+    });
+    Ok(())
 }

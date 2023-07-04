@@ -1,5 +1,6 @@
 use futures_util::{SinkExt, StreamExt};
 use lynsmi::Props;
+use serde::{Deserialize, Serialize};
 use tokio::net::TcpStream;
 use tokio_util::codec::{AnyDelimiterCodec, AnyDelimiterCodecError, Decoder, Framed};
 use tracing::instrument;
@@ -12,7 +13,12 @@ pub enum Error {
     SeardeJsonError(#[from] serde_json::Error),
 }
 
-pub type AllProps = Vec<Option<Props>>;
+#[derive(Debug, Serialize, Deserialize)]
+pub struct PropsWithID {
+    pub id: usize,
+    pub props: Option<Props>,
+    pub err: Option<String>,
+}
 
 pub type Result<T> = std::result::Result<T, Error>;
 
@@ -28,20 +34,20 @@ impl Connection {
     }
 
     #[instrument]
-    pub async fn send(&mut self, data: &AllProps) -> Result<()> {
+    pub async fn send(&mut self, data: &PropsWithID) -> Result<()> {
         let b = serde_json::to_string(&data)?;
         self.framed.send(b).await?;
         Ok(())
     }
 
     #[instrument]
-    pub async fn next(&mut self) -> Option<Result<AllProps>> {
+    pub async fn next(&mut self) -> Option<Result<PropsWithID>> {
         Some(
             self.framed
                 .next()
                 .await?
                 .map_err(|e| Error::AnyDelimiterCodecError(e))
-                .and_then(|v| serde_json::from_slice::<AllProps>(&v).map_err(|e| e.into())),
+                .and_then(|v| serde_json::from_slice::<PropsWithID>(&v).map_err(|e| e.into())),
         )
     }
 }

@@ -1,8 +1,10 @@
 package main
 
 import (
+	"errors"
 	"log"
 	"net/http"
+	"strconv"
 	"time"
 
 	smi "lyndeviceplugin/lynsmi-service-client-go"
@@ -31,7 +33,9 @@ func main() {
 	go func() {
 		log.Fatalln(gr.Record())
 	}()
-	smiImpl, err := smi.New("127.0.0.1:5432")
+	smiImpl, err := smi.New("127.0.0.1:5432", func(id int, s string) {
+		metrics.GlobalRecorder.LogError(errors.New("device " + strconv.Itoa(id) + " error: " + s))
+	})
 	if err != nil {
 		log.Fatalln(err)
 	}

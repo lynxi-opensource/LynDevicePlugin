@@ -1,6 +1,58 @@
+use std::{
+    net::SocketAddr,
+    sync::{Arc, Condvar, Mutex},
+};
+
+use lynsmi::Props;
 use lynsmi_service::prelude::*;
-use tokio::net::TcpListener;
+use tokio::{
+    net::{TcpListener, TcpStream},
+    spawn,
+    sync::broadcast::{channel, error::RecvError, Receiver, Sender},
+};
 use tracing::{info, warn};
+
+async fn handle(socket: TcpStream, addr: SocketAddr, mut rx: Receiver<Data>) {
+    let mut conn = Connection::new(socket);
+    info!("accept client {}", addr);
+    loop {
+        match rx.recv().await {
+            Ok(v) => {
+                let id = v.0;
+                let (props, err) = match v.1.as_ref() {
+                    Err(e) => {
+                        warn!("device {} err {:?}", id, e);
+                        (None, Some(e.to_string()))
+                    }
+                    Ok(v) => (Some(v.to_owned()), None),
+                };
+                if let Err(e) = conn.send(&PropsWithID { id, props, err }).await {
+                    warn!("failed to send to client; addr = {}; err = {:?}", addr, e);
+                    return;
+                }
+            }
+            Err(RecvError::Lagged(v)) => warn!("lagged {}", v),
+            Err(RecvError::Closed) => break,
+        }
+    }
+}
+
+async fn listen(listener: TcpListener, tx: Sender<Data>, notify: Arc<(Mutex<bool>, Condvar)>) {
+    let (lock, cvar) = &*notify;
+    loop {
+        match listener.accept().await {
+            Err(e) => warn!("failed to accept client {}", e),
+            Ok((socket, addr)) => {
+                let rx = tx.subscribe();
+                {
+                    let _l = lock.lock().unwrap();
+                    cvar.notify_all();
+                }
+                tokio::spawn(handle(socket, addr, rx));
+            }
+        };
+    }
+}
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -9,32 +61,10 @@ async fn main() -> anyhow::Result<()> {
     const ADDR: &'static str = "0.0.0.0:5432";
     info!("listen on {}", ADDR);
     let listener = TcpListener::bind(ADDR).await?;
+    let (tx, _) = channel::<Arc<(usize, lynsmi::Result<Props>)>>(100);
+    let notify = Arc::new((Mutex::new(false), Condvar::new()));
+    spawn(listen(listener, tx.clone(), notify.clone()));
 
-    let smi_watcher = SMIWatcher::new().await?;
-    loop {
-        let (socket, addr) = listener.accept().await?;
-        let mut smi = smi_watcher.subscribe();
-
-        tokio::spawn(async move {
-            let mut conn = Connection::new(socket);
-            info!("accept client {}", addr);
-            while smi.changed().await.is_ok() {
-                let all_props: Vec<_> = smi
-                    .borrow()
-                    .iter()
-                    .map(|v| match v.as_ref() {
-                        Err(e) => {
-                            warn!("device err {:?}", e);
-                            None
-                        }
-                        Ok(v) => Some(v.to_owned()),
-                    })
-                    .collect();
-                if let Err(e) = conn.send(&all_props).await {
-                    warn!("failed to send to client; addr = {}; err = {:?}", addr, e);
-                    return;
-                }
-            }
-        });
-    }
+    watch(tx, notify).await?;
+    Ok(())
 }

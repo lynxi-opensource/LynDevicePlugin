@@ -17,13 +17,13 @@ const (
 
 var StateEnumDescription string
 
-func (r *globalRecorder) logIfError(err error) {
+func (r *globalRecorder) LogIfError(err error) {
 	if err != nil {
-		r.logError(err)
+		r.LogError(err)
 	}
 }
 
-func (r *globalRecorder) logError(err error) {
+func (r *globalRecorder) LogError(err error) {
 	r.lynxiExporterState.Set(float64(StateErr))
 	log.Println(err)
 	r.reset <- struct{}{}

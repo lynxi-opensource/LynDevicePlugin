@@ -1,4 +1,3 @@
-use rayon::ThreadPoolBuildError;
 use std::{
     ffi::FromBytesWithNulError, io::Error as IoError, num::ParseIntError, str::Utf8Error,
     string::FromUtf8Error,
@@ -21,12 +20,8 @@ pub enum Error {
     Io(#[from] IoError),
     #[error("{0}")]
     ParseInt(#[from] ParseIntError),
-    #[error("StripVersionPrefix")]
-    StripVersionPrefix,
-    #[error("VersionSplit")]
-    SplitVersion,
-    #[error("ThreadPoolBuildError")]
-    ThreadPoolBuildError(#[from] ThreadPoolBuildError),
+    #[error("NoVersionInfo {0}")]
+    NoVersionInfo(String),
 }
 
 impl Error {

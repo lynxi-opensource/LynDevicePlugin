@@ -12,7 +12,9 @@ import (
 
 func main() {
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
-	smiImpl, err := smi.New("127.0.0.1:5432")
+	smiImpl, err := smi.New("127.0.0.1:5432", func(id int, s string) {
+		log.Println(id, s)
+	})
 	if err != nil {
 		log.Fatalln(err)
 	}
