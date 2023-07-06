@@ -9,7 +9,7 @@ use tracing::{info, warn};
 
 pub type Data = Arc<(usize, lynsmi::Result<Props>)>;
 
-pub async fn watch(tx: Sender<Data>, notify: Arc<(Mutex<bool>, Condvar)>) -> Result<()> {
+pub fn watch(tx: Sender<Data>, notify: Arc<(Mutex<bool>, Condvar)>) -> Result<()> {
     let lib = Lib::try_default()?;
     let smi = Symbols::new(&lib)?;
     let device_cnt = smi.get_device_cnt()?;

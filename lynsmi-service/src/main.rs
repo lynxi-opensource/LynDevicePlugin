@@ -7,8 +7,9 @@ use lynsmi::Props;
 use lynsmi_service::prelude::*;
 use tokio::{
     net::{TcpListener, TcpStream},
-    spawn,
+    select, spawn,
     sync::broadcast::{channel, error::RecvError, Receiver, Sender},
+    task::spawn_blocking,
 };
 use tracing::{info, warn};
 
@@ -61,10 +62,13 @@ async fn main() -> anyhow::Result<()> {
     const ADDR: &'static str = "0.0.0.0:5432";
     info!("listen on {}", ADDR);
     let listener = TcpListener::bind(ADDR).await?;
+
     let (tx, _) = channel::<Arc<(usize, lynsmi::Result<Props>)>>(100);
     let notify = Arc::new((Mutex::new(false), Condvar::new()));
-    spawn(listen(listener, tx.clone(), notify.clone()));
+    select!(
+        _ = spawn(listen(listener, tx.clone(), notify.clone())) => {},
+        result = spawn_blocking(move || watch(tx, notify)) => result??
+    );
 
-    watch(tx, notify).await?;
     Ok(())
 }
