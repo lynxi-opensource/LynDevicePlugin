@@ -20,4 +20,4 @@ spec:
             - "watch"
           resources:
             limits:
-              lynxi.com/device: "1"
+              lynxi.com/device: "5"

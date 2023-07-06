@@ -28,6 +28,10 @@ func (m gaugeVec) set(device Props, v float64) {
 	m.m.WithLabelValues(m.labels.getValues(device)...).Set(v)
 }
 
+func (m gaugeVec) setNoProps(device Props, v float64) {
+	m.m.WithLabelValues(m.labels.getNoProps(device)...).Set(v)
+}
+
 func (m gaugeVec) reset() {
 	m.m.Reset()
 }
@@ -109,6 +113,7 @@ type labels []string
 var boardLabels labels = labels{labelProductName, labelManufacturer, labelMountTime, labelBoardID, labelSerialNumber}
 var deviceMetricLabels labels = append(boardLabels, labels{labelModel, labelID, labelUUID, labelPod, labelNamespace, labelContainer}...)
 var memLabels labels = append(deviceMetricLabels, labels{labelMemTotal}...)
+var ignoreLabels labels = append(boardLabels, labels{labelModel, labelUUID}...)
 
 var mountTime = time.Now().Format(time.RFC3339)
 
@@ -116,6 +121,25 @@ func (ls labels) getValues(device Props) []string {
 	ret := make([]string, len(ls))
 	for i := range ls {
 		ret[i] = ls.getValue(device, i)
+	}
+	return ret
+}
+
+func isLabelIn(label string, labels []string) bool {
+	for _, l := range labels {
+		if label == l {
+			return true
+		}
+	}
+	return false
+}
+
+func (ls labels) getNoProps(device Props) []string {
+	ret := make([]string, len(ls))
+	for i, label := range ls {
+		if !isLabelIn(label, ignoreLabels) {
+			ret[i] = ls.getValue(device, i)
+		}
 	}
 	return ret
 }
@@ -225,7 +249,7 @@ func (m *DeviceRecorder) Record() error {
 			m.lynxiDeviceCurrentTemp.set(device, float64(device.Device.Temperature))
 			m.lynxiBoardPower.set(device, float64(device.Board.PowerDraw))
 		} else {
-			m.lynxiDeviceStates.set(Props{res_owner, smi.Props{}, id}, StateErr)
+			m.lynxiDeviceStates.setNoProps(Props{res_owner, smi.Props{}, id}, StateErr)
 		}
 	}
 	return nil

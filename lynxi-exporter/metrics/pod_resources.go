@@ -3,6 +3,7 @@ package metrics
 import (
 	smi "lyndeviceplugin/lynsmi-interface"
 	podresources "lyndeviceplugin/lynxi-exporter/pod_resources"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -58,6 +59,17 @@ func (m PodContainerRecorder) getUUIDs(deviceIDs []string) (ret []string) {
 	return
 }
 
+type StringNumberSlice []string
+
+func (a StringNumberSlice) Len() int      { return len(a) }
+func (a StringNumberSlice) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
+func (a StringNumberSlice) Less(i, j int) bool {
+	if len(a[i]) == len(a[j]) {
+		return a[i] < a[j]
+	}
+	return len(a[i]) < len(a[j])
+}
+
 func (m *PodContainerRecorder) Record() error {
 	m.updateUUIDs()
 	resp, err := m.podRes.Get()
@@ -67,6 +79,7 @@ func (m *PodContainerRecorder) Record() error {
 	} else {
 		m.lynxiPodContainerDeviceCount.Reset()
 		for _, res := range resp {
+			sort.Sort(StringNumberSlice(res.IDs))
 			m.lynxiPodContainerDeviceCount.WithLabelValues(
 				res.Pod, res.Container, res.Namespace,
 				strings.Join(res.IDs, ","),
