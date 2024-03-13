@@ -19,5 +19,9 @@ spec:
       path: /metrics
       port: http-metrics
       scheme: http
+      relabelings:
+        - sourceLabels:
+            - __meta_kubernetes_pod_node_name
+          targetLabel: node
 {{end}}
 {{end}}
