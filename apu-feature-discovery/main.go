@@ -4,16 +4,12 @@ package main
 
 import (
 	"bytes"
-	"context"
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
-	"os/exec"
 	"os/signal"
 	"path/filepath"
-	"regexp"
 	"syscall"
 	"time"
 
@@ -90,7 +86,7 @@ L:
 		log.Print("getAPULabels begin")
 		APULabels, err := getAPULabels(lynxipci)
 		if err != nil {
-			log.Printf("Error: Error generating APU labels: %v", err)
+			return fmt.Errorf("Error generating APU labels: %v", err)
 		}
 
 		if len(APULabels) == 0 {
@@ -119,22 +115,6 @@ func getAPULabels(lynxipci LynxiPCI) (map[string]string, error) {
 	labels := make(map[string]string)
 	if len(devices) > 0 {
 		labels["lynxi.com/apu.present"] = "true"
-
-		if r, err := regexp.Compile(`SMI version: (\d+)\.(\d+)\.(\d+)`); err != nil {
-			return labels, err
-		} else {
-			ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
-			defer cancel()
-			output, err := exec.CommandContext(ctx, "lynxi-smi", "-v").CombinedOutput()
-			if err != nil {
-				return labels, err
-			}
-			match := r.Find(output)
-			if match == nil {
-				return labels, errors.New("invalid lynxi-smi -v output: " + string(output))
-			}
-			labels["lynxi.com/driver_version"] = string(match)
-		}
 	} else {
 		labels["lynxi.com/apu.present"] = "false"
 	}
