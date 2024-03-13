@@ -3,7 +3,7 @@ use libloading::{Library, Symbol};
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use std::{
-    ffi::{c_char, CStr, OsStr},
+    ffi::{c_char, c_int, CStr, OsStr},
     fmt::Debug,
     mem::zeroed,
     process::Command,
@@ -113,38 +113,96 @@ impl Lib {
     }
 }
 
+#[repr(C)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+pub enum P2PMode {
+    NonSupport,
+    P2PLinkPIX,
+    P2PLinkPXB,
+    P2PLinkPHB,
+    P2PLinkSYS,
+}
+
 #[derive(Clone)]
-pub struct Symbols<'lib> {
-    lib_get_device_cnt: Symbol<'lib, fn(&mut i32) -> i32>,
-    lib_get_device_props_v1: Symbol<'lib, fn(i32, &mut lynDeviceProperties_t_v1) -> i32>,
-    lib_get_device_props_v2: Symbol<'lib, fn(i32, &mut lynDeviceProperties_t_v2) -> i32>,
+pub struct CommonSymbols<'lib> {
+    lib_get_device_cnt: Symbol<'lib, fn(&mut i32) -> c_int>,
+}
+
+impl<'lib> CommonSymbols<'lib> {
+    pub fn new(lib: &'lib Lib) -> Result<Self> {
+        unsafe {
+            Ok(Self {
+                lib_get_device_cnt: lib.0.get(b"lynGetDeviceCountSmi")?,
+            })
+        }
+    }
+
+    pub fn get_device_cnt(&self) -> Result<i32> {
+        let mut cnt = 0;
+        Error::check((self.lib_get_device_cnt)(&mut cnt))?;
+        Ok(cnt)
+    }
+}
+
+#[derive(Clone)]
+pub struct TopologySymbols<'lib> {
+    lib_device_show_topology: Symbol<'lib, fn() -> c_int>,
+    lib_get_device_p2p_attr: Symbol<'lib, fn(c_int, c_int, &mut P2PMode, &mut c_int) -> c_int>,
+}
+
+impl<'lib> TopologySymbols<'lib> {
+    pub fn new(lib: &'lib Lib) -> Result<Self> {
+        unsafe {
+            Ok(Self {
+                lib_device_show_topology: lib.0.get(b"lynDeviceShowTopologyS")?,
+                lib_get_device_p2p_attr: lib.0.get(b"lynGetDeviceP2PAttrS")?,
+            })
+        }
+    }
+
+    pub fn show_topology(&self) -> Result<()> {
+        let f = &self.lib_device_show_topology;
+        Error::check(f())
+    }
+
+    pub fn get_device_p2p_attr(&self, src_device: i32, dst_device: i32) -> Result<P2PAttr> {
+        let f = &self.lib_get_device_p2p_attr;
+        let mut mode = P2PMode::NonSupport;
+        let mut dist: c_int = 0;
+        Error::check(f(src_device, dst_device, &mut mode, &mut dist))?;
+        Ok(P2PAttr { mode, dist })
+    }
+}
+
+#[derive(Clone)]
+pub struct PropsSymbols<'lib> {
+    lib_get_device_props_v1: Symbol<'lib, fn(i32, &mut lynDeviceProperties_t_v1) -> c_int>,
+    lib_get_device_props_v2: Symbol<'lib, fn(i32, &mut lynDeviceProperties_t_v2) -> c_int>,
     driver_version: DriverVersion,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Props {
-    board: BoardProps,
-    device: DeviceProps,
+    pub board: BoardProps,
+    pub device: DeviceProps,
 }
 
-impl<'lib> Symbols<'lib> {
+impl<'lib> PropsSymbols<'lib> {
     pub fn new(lib: &'lib Lib) -> Result<Self> {
         unsafe {
             Ok(Self {
-                lib_get_device_cnt: lib.0.get(b"lynGetDeviceCountSmi")?,
                 lib_get_device_props_v1: lib.0.get(b"lynGetDeviceProperties")?,
                 lib_get_device_props_v2: lib.0.get(b"lynGetDeviceProperties")?,
                 driver_version: DriverVersion::local()?,
             })
         }
     }
-    pub fn get_device_cnt(&self) -> Result<usize> {
-        let mut cnt = 0;
-        Error::check((self.lib_get_device_cnt)(&mut cnt))?;
-        Ok(cnt as usize)
+
+    pub fn get_driver_version(&self) -> &DriverVersion {
+        &self.driver_version
     }
 
-    fn get_props_v1(&self, id: usize) -> Result<Props> {
+    fn get_props_v1(&self, id: i32) -> Result<Props> {
         let mut c_device_prop: lynDeviceProperties_t_v1 = unsafe { zeroed() };
         Error::check((self.lib_get_device_props_v1)(
             id as i32,
@@ -173,7 +231,7 @@ impl<'lib> Symbols<'lib> {
         })
     }
 
-    fn get_props_v2(&self, id: usize) -> Result<Props> {
+    fn get_props_v2(&self, id: i32) -> Result<Props> {
         let mut c_device_prop: lynDeviceProperties_t_v2 = unsafe { zeroed() };
         Error::check((self.lib_get_device_props_v2)(
             id as i32,
@@ -202,13 +260,19 @@ impl<'lib> Symbols<'lib> {
         })
     }
 
-    pub fn get_props(&self, id: usize) -> Result<Props> {
+    pub fn get_props(&self, id: i32) -> Result<Props> {
         match &self.driver_version {
             v if v < &V1_10_2 => self.get_props_v1(id),
             v if v >= &V1_10_2 => self.get_props_v2(id),
             _ => unreachable!(),
         }
     }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+pub struct P2PAttr {
+    pub mode: P2PMode,
+    pub dist: i32,
 }
 
 #[non_exhaustive]
@@ -242,8 +306,8 @@ fn string_from_c(data: &[c_char]) -> Result<String> {
 
 const V1_10_2: DriverVersion = DriverVersion(1, 10, 2);
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
-struct DriverVersion(usize, usize, usize);
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+pub struct DriverVersion(pub usize, pub usize, pub usize);
 
 impl DriverVersion {
     pub fn local() -> Result<Self> {
@@ -268,15 +332,42 @@ mod tests {
     #[test]
     fn test_get_device_cnt() {
         let lib = Lib::try_default().unwrap();
-        let symbols = Symbols::new(&lib).unwrap();
+        let symbols = CommonSymbols::new(&lib).unwrap();
         println!("{:?}", symbols.get_device_cnt().unwrap())
     }
 
     #[test]
     fn test_get_device_prop() {
         let lib = Lib::try_default().unwrap();
-        let symbols = Symbols::new(&lib).unwrap();
+        let symbols = PropsSymbols::new(&lib).unwrap();
         println!("{:?}", symbols.get_props(0).unwrap())
+    }
+
+    #[test]
+    fn test_show_topology() {
+        let lib = Lib::try_default().unwrap();
+        let symbols = TopologySymbols::new(&lib).unwrap();
+        println!("{:?}", symbols.show_topology());
+    }
+
+    #[test]
+    fn test_get_device_p2p_attr() {
+        let lib = Lib::try_default().unwrap();
+        let common_symbols = CommonSymbols::new(&lib).unwrap();
+        let symbols = TopologySymbols::new(&lib).unwrap();
+        let device_cnt = common_symbols.get_device_cnt().unwrap();
+        for src_device in 0..device_cnt {
+            for dst_device in (src_device + 1)..device_cnt {
+                println!(
+                    "{} {} {:?}",
+                    src_device,
+                    dst_device,
+                    symbols
+                        .get_device_p2p_attr(src_device as i32, dst_device as i32)
+                        .unwrap()
+                );
+            }
+        }
     }
 
     #[test]

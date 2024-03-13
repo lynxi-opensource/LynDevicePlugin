@@ -3,6 +3,8 @@ use std::{
     string::FromUtf8Error,
 };
 
+use serde::{Serialize, Serializer};
+
 #[non_exhaustive]
 #[derive(thiserror::Error, Debug)]
 pub enum Error {
@@ -22,6 +24,15 @@ pub enum Error {
     ParseInt(#[from] ParseIntError),
     #[error("NoVersionInfo {0}")]
     NoVersionInfo(String),
+}
+
+impl Serialize for Error {
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        serializer.serialize_str(&self.to_string())
+    }
 }
 
 impl Error {

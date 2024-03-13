@@ -1,7 +1,7 @@
-FROM --platform=$TARGETPLATFORM ubuntu:18.04
+FROM --platform=$TARGETPLATFORM ubuntu:20.04
 
 WORKDIR /work
 ARG BIN
 ARG TARGETARCH
-COPY $TARGETARCH/lynsmi-service main
+COPY $TARGETARCH/$BIN main
 ENTRYPOINT [ "/work/main" ]

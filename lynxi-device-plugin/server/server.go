@@ -31,7 +31,6 @@ type Server interface {
 type ServerImp struct {
 }
 
-//
 func (m *ServerImp) Run(socket, resourceName string, service pluginapi.DevicePluginServer) error {
 	log.Println("Starting OS watcher.")
 	sigs := newOSWatcher(syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
@@ -88,7 +87,6 @@ type LynxiServer struct {
 	plugin       *pluginapi.DevicePluginServer // k8s plugin
 }
 
-//
 func (m *LynxiServer) Start() error {
 	m.initialize()
 
@@ -126,7 +124,6 @@ func (m *LynxiServer) Stop() error {
 	return nil
 }
 
-//
 func (m *LynxiServer) Serve() error {
 	os.Remove(m.socket)
 	sock, err := net.Listen("unix", m.socket)
@@ -176,7 +173,6 @@ func (m *LynxiServer) Serve() error {
 	return nil
 }
 
-//
 func (m *LynxiServer) Register() error {
 	conn, err := m.dial(pluginapi.KubeletSocket, 5*time.Second)
 	if err != nil {
@@ -190,7 +186,7 @@ func (m *LynxiServer) Register() error {
 		Endpoint:     path.Base(m.socket),
 		ResourceName: m.resourceName,
 		Options: &pluginapi.DevicePluginOptions{
-			GetPreferredAllocationAvailable: false,
+			GetPreferredAllocationAvailable: true,
 		},
 	}
 

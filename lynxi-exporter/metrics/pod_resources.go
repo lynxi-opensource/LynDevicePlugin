@@ -1,7 +1,7 @@
 package metrics
 
 import (
-	smi "lyndeviceplugin/lynsmi-interface"
+	smi "lyndeviceplugin/lynsmi-service-client-go"
 	podresources "lyndeviceplugin/lynxi-exporter/pod_resources"
 	"sort"
 	"strconv"
@@ -17,12 +17,12 @@ var _ Recorder = &PodContainerRecorder{}
 type PodContainerRecorder struct {
 	lynxiPodContainerDeviceCount *prometheus.GaugeVec
 	deviceID2UUID                map[string]string
-	smi                          smi.SMI
+	smi                          smi.LynSMI
 	podRes                       *podresources.PodResources
 }
 
 // NewStatesRecorder 构造一个StatesRecorder并初始化指标
-func NewPodContainerRecorder(smi smi.SMI, podRes *podresources.PodResources) *PodContainerRecorder {
+func NewPodContainerRecorder(smi smi.LynSMI, podRes *podresources.PodResources) *PodContainerRecorder {
 	ret := &PodContainerRecorder{
 		lynxiPodContainerDeviceCount: promauto.NewGaugeVec(prometheus.GaugeOpts{
 			Name: "lynxi_pod_container_device_count",
@@ -45,8 +45,8 @@ func (m PodContainerRecorder) updateUUIDs() {
 		GlobalRecorder.LogError(err)
 	}
 	for i, deviceInfo := range deviceInfos {
-		if deviceInfo != nil {
-			m.deviceID2UUID[strconv.Itoa(i)] = deviceInfo.Device.UUID
+		if info, err := deviceInfo.Get(); err == nil && info != nil {
+			m.deviceID2UUID[strconv.Itoa(int(i))] = info.Device.UUID
 		}
 	}
 }

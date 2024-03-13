@@ -20,4 +20,13 @@ spec:
             - "watch"
           resources:
             limits:
-              lynxi.com/device: "5"
+              lynxi.com/device: "2"
+        - name: example2
+          image: ubuntu:18.04
+          command:
+            - "lynxi-smi"
+          args:
+            - "watch"
+          resources:
+            limits:
+              lynxi.com/device: "2"

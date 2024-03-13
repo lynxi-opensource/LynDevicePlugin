@@ -1,12 +1,11 @@
 package metrics
 
 import (
+	smi "lyndeviceplugin/lynsmi-service-client-go"
+	podresources "lyndeviceplugin/lynxi-exporter/pod_resources"
 	"strconv"
 	"sync"
 	"time"
-
-	smi "lyndeviceplugin/lynsmi-interface"
-	podresources "lyndeviceplugin/lynxi-exporter/pod_resources"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
@@ -48,12 +47,13 @@ type DeviceRecorder struct {
 	lynxiDeviceIpeUsage    gaugeVec
 	lynxiDeviceCurrentTemp gaugeVec
 	lynxiBoardPower        gaugeVec
-	smi                    smi.SMI
+	smi                    smi.LynSMI
 	podRes                 *podresources.PodResources
+	devices_cache          map[int]Props
 }
 
 // NewDeviceRecorder 构造一个DeviceRecorder并初始化指标
-func NewDeviceRecorder(smi smi.SMI, podRes *podresources.PodResources) *DeviceRecorder {
+func NewDeviceRecorder(smi_handle smi.LynSMI, podRes *podresources.PodResources) *DeviceRecorder {
 	ret := &DeviceRecorder{
 		lynxiDeviceStates: newGaugeVec(prometheus.GaugeOpts{
 			Name: "lynxi_device_state",
@@ -87,8 +87,9 @@ func NewDeviceRecorder(smi smi.SMI, podRes *podresources.PodResources) *DeviceRe
 			Name: "lynxi_board_power",
 			Help: "The power of the board with unit mW. HM100 is unsupported, and the value is always 0",
 		}, boardLabels),
-		smi:    smi,
-		podRes: podRes,
+		smi:           smi_handle,
+		podRes:        podRes,
+		devices_cache: make(map[int]Props),
 	}
 	return ret
 }
@@ -113,7 +114,7 @@ type labels []string
 var boardLabels labels = labels{labelProductName, labelManufacturer, labelMountTime, labelBoardID, labelSerialNumber}
 var deviceMetricLabels labels = append(boardLabels, labels{labelModel, labelID, labelUUID, labelPod, labelNamespace, labelContainer}...)
 var memLabels labels = append(deviceMetricLabels, labels{labelMemTotal}...)
-var ignoreLabels labels = append(boardLabels, labels{labelModel, labelUUID}...)
+var ignoreLabels labels = append(boardLabels, labels{labelModel}...)
 
 var mountTime = time.Now().Format(time.RFC3339)
 
@@ -219,7 +220,7 @@ func concurrentExec(fns ...func()) {
 }
 
 func (m *DeviceRecorder) Record() error {
-	var devices smi.AllProps
+	var devices smi.PropsMap
 	var id2ResOwner map[string]podresources.ResourceOwner
 	var smiErr error
 	var resErr error
@@ -228,18 +229,20 @@ func (m *DeviceRecorder) Record() error {
 	}, func() {
 		id2ResOwner, resErr = m.getResoureOwners()
 	})
-	if smiErr != nil {
-		return smiErr
-	}
+	GlobalRecorder.LogIfError(smiErr)
 	if resErr != nil {
+		GlobalRecorder.LogError(resErr)
 		return resErr
 	}
 	m.reset()
-	for i, device_ptr := range devices {
-		id := strconv.Itoa(i)
+	for i, props_result := range devices {
+		id := strconv.Itoa(int(i))
 		res_owner := id2ResOwner[id]
-		if device_ptr != nil {
-			device := Props{res_owner, *device_ptr, id}
+		props, err := props_result.Get()
+		GlobalRecorder.LogIfError(err)
+		if props != nil {
+			device := Props{res_owner, *props, id}
+			m.devices_cache[int(i)] = device
 			m.lynxiDeviceStates.set(device, StateOK)
 			m.lynxiDeviceMemUsed.set(device, float64(device.Device.MemoryUsed))
 			m.lynxiDeviceApuUsage.set(device, float64(device.Device.ApuUsage))
@@ -249,7 +252,9 @@ func (m *DeviceRecorder) Record() error {
 			m.lynxiDeviceCurrentTemp.set(device, float64(device.Device.Temperature))
 			m.lynxiBoardPower.set(device, float64(device.Board.PowerDraw))
 		} else {
-			m.lynxiDeviceStates.setNoProps(Props{res_owner, smi.Props{}, id}, StateErr)
+			props := Props{res_owner, smi.Props{}, id}
+			props.Device.UUID = m.devices_cache[int(i)].Device.UUID
+			m.lynxiDeviceStates.setNoProps(props, StateErr)
 		}
 	}
 	return nil

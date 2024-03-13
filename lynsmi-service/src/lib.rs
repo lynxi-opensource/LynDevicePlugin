@@ -1,7 +1,14 @@
-pub mod connection;
-pub mod watcher;
+pub mod models {
+    use lynsmi::{P2PAttr, Props, Result};
+    use serde::Serialize;
+    use std::collections::HashMap;
 
-pub mod prelude {
-    pub use crate::connection::*;
-    pub use crate::watcher::*;
+    #[derive(Debug, Clone, Serialize)]
+    pub struct DeviceP2PAttr {
+        pub device_pair: (i32, i32),
+        pub attr: P2PAttr,
+    }
+
+    pub type PropsMap = HashMap<i32, Result<Props>>;
+    pub type P2PAttrList = Vec<Result<DeviceP2PAttr>>;
 }

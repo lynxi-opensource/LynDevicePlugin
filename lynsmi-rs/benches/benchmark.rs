@@ -4,7 +4,7 @@ use rayon::prelude::*;
 
 fn get_device_props_benchmark(c: &mut Criterion) {
     let lib = Lib::try_default().unwrap();
-    let symbols = Symbols::new(&lib).unwrap();
+    let symbols = PropsSymbols::new(&lib).unwrap();
 
     let mut group = c.benchmark_group("lynsmi");
     group.sample_size(10);
@@ -14,8 +14,9 @@ fn get_device_props_benchmark(c: &mut Criterion) {
 
 fn get_devices_benchmark(c: &mut Criterion) {
     let lib = Lib::try_default().unwrap();
-    let smi = Symbols::new(&lib).unwrap();
-    let cnt = smi.get_device_cnt().unwrap();
+    let smi_common = CommonSymbols::new(&lib).unwrap();
+    let smi = PropsSymbols::new(&lib).unwrap();
+    let cnt = smi_common.get_device_cnt().unwrap();
 
     let mut group = c.benchmark_group("lynsmi");
     group.sample_size(10);
