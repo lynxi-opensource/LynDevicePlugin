@@ -40,7 +40,6 @@ var _ Recorder = &DeviceRecorder{}
 // Device 定义和记录所有device相关的Prometheus指标
 type DeviceRecorder struct {
 	lynxiDeviceState       gaugeVec
-	lynxiDeviceException   gaugeVec
 	lynxiDeviceMemUsed     gaugeVec
 	lynxiDeviceApuUsage    gaugeVec
 	lynxiDeviceArmUsage    gaugeVec
@@ -205,7 +204,6 @@ func (ls labels) getValue(device Props, i int) string {
 
 func (m *DeviceRecorder) reset() {
 	m.lynxiDeviceState.reset()
-	m.lynxiDeviceException.reset()
 	m.lynxiDeviceMemUsed.reset()
 	m.lynxiDeviceApuUsage.reset()
 	m.lynxiDeviceArmUsage.reset()
@@ -286,7 +284,6 @@ func (m *DeviceRecorder) Record() error {
 			device := Props{res_owner, *props, id, errMsg}
 			m.devices_cache[int(i)] = device
 			m.lynxiDeviceState.set(device, StateOK)
-			m.lynxiDeviceException.set(device, StateOK)
 			m.lynxiDeviceMemUsed.set(device, float64(device.Device.MemoryUsed))
 			m.lynxiDeviceApuUsage.set(device, float64(device.Device.ApuUsage))
 			m.lynxiDeviceArmUsage.set(device, float64(device.Device.ArmUsage))
