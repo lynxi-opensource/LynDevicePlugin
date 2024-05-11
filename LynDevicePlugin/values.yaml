@@ -6,20 +6,20 @@ namespace:
 imagePullPolicy: IfNotPresent
 
 lynxiDevicePlugin:
-  image: lynxidocker/lynxi-device-plugin:1.6.0
+  image: lynxidocker/lynxi-device-plugin:1.7.0
 
 lynxiExporter:
   enable: true # 是否部署
-  image: lynxidocker/lynxi-exporter:1.6.0
+  image: lynxidocker/lynxi-exporter:1.7.0
   serviceMonitor: # Prometheus-operator的ServiceMonitor资源的配置
     enable: true # 是否部署
     interval: 1s # Prometheus的采样间隔
 
 apuFeatureDiscovery:
-  image: lynxidocker/apu-feature-discovery:1.6.0
+  image: lynxidocker/apu-feature-discovery:1.7.0
 
 lynsmiService:
-  image: lynxidocker/lynsmi-service:1.6.0
+  image: lynxidocker/lynsmi-service:1.7.0
 
 lynxiDeviceDiscovery:
-  image: lynxidocker/lynxi-device-discovery:1.6.0
+  image: lynxidocker/lynxi-device-discovery:1.7.0

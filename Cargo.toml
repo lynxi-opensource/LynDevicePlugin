@@ -1,7 +1,3 @@
 [workspace]
 resolver = "2"
-members = [
-    "lynsmi-rs",
-    "lynsmi-service",
-    "lynxi-device-discovery",
-]
+members = ["lyndriver-rs", "lynsmi-service", "lynxi-device-discovery"]

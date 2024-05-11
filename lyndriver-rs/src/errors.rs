@@ -24,6 +24,8 @@ pub enum Error {
     ParseInt(#[from] ParseIntError),
     #[error("NoVersionInfo {0}")]
     NoVersionInfo(String),
+    #[error("InitSigletonError {0}")]
+    InitSigletonError(#[from] &'static Error),
 }
 
 impl Serialize for Error {

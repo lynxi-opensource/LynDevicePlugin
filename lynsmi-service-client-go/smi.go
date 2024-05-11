@@ -109,3 +109,36 @@ func (m LynSMI) GetDeviceTopologyList() (ret *P2PAttrList, err error) {
 	err = json.Unmarshal(body, &ret)
 	return
 }
+
+type ErrType int
+
+const (
+	ERR_TYPE_CHIP ErrType = iota
+	ERR_TYPE_BOARD
+	ERR_TYPE_NODE
+	ERR_TYPE_OTHER
+)
+
+type ErrMsg struct {
+	Typ           ErrType `json:"type"`
+	DevID         uint32  `json:"devid"`
+	EnableRecover int32   `json:"enable_recover"`
+	Msg           string  `json:"msg"`
+}
+
+func (m LynSMI) GetDrvExceptionMap() (ret map[uint32]ErrMsg, err error) {
+	client := http.Client{
+		Timeout: 10 * time.Second,
+	}
+	resp, err := client.Get("http://localhost:5432/drv_exception_map")
+	if err != nil {
+		return
+	}
+	defer resp.Body.Close()
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return
+	}
+	err = json.Unmarshal(body, &ret)
+	return
+}

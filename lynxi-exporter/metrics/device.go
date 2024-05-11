@@ -39,7 +39,8 @@ var _ Recorder = &DeviceRecorder{}
 
 // Device 定义和记录所有device相关的Prometheus指标
 type DeviceRecorder struct {
-	lynxiDeviceStates      gaugeVec
+	lynxiDeviceState       gaugeVec
+	lynxiDeviceException   gaugeVec
 	lynxiDeviceMemUsed     gaugeVec
 	lynxiDeviceApuUsage    gaugeVec
 	lynxiDeviceArmUsage    gaugeVec
@@ -55,10 +56,10 @@ type DeviceRecorder struct {
 // NewDeviceRecorder 构造一个DeviceRecorder并初始化指标
 func NewDeviceRecorder(smi_handle smi.LynSMI, podRes *podresources.PodResources) *DeviceRecorder {
 	ret := &DeviceRecorder{
-		lynxiDeviceStates: newGaugeVec(prometheus.GaugeOpts{
+		lynxiDeviceState: newGaugeVec(prometheus.GaugeOpts{
 			Name: "lynxi_device_state",
 			Help: "The state of the device",
-		}, deviceMetricLabels),
+		}, deviceStateLabels),
 		lynxiDeviceMemUsed: newGaugeVec(prometheus.GaugeOpts{
 			Name: "lynxi_device_mem_used",
 			Help: "The memory used of the device with unit KB",
@@ -95,24 +96,28 @@ func NewDeviceRecorder(smi_handle smi.LynSMI, podRes *podresources.PodResources)
 }
 
 const (
-	labelProductName  = "product_name"
-	labelManufacturer = "manufacturer"
-	labelMountTime    = "mount_time"
-	labelBoardID      = "board_id"
-	labelSerialNumber = "serial_number"
-	labelModel        = "model"
-	labelID           = "id"
-	labelUUID         = "uuid"
-	labelMemTotal     = "mem_total"
-	labelPod          = "owner_pod"
-	labelContainer    = "owner_container"
-	labelNamespace    = "owner_namespace"
+	labelProductName   = "product_name"
+	labelManufacturer  = "manufacturer"
+	labelMountTime     = "mount_time"
+	labelBoardID       = "board_id"
+	labelSerialNumber  = "serial_number"
+	labelModel         = "model"
+	labelID            = "id"
+	labelUUID          = "uuid"
+	labelMemTotal      = "mem_total"
+	labelPod           = "owner_pod"
+	labelContainer     = "owner_container"
+	labelNamespace     = "owner_namespace"
+	labelErrType       = "err_type"
+	labelErrMsg        = "err_msg"
+	labelEnableRecover = "enable_recover"
 )
 
 type labels []string
 
 var boardLabels labels = labels{labelProductName, labelManufacturer, labelMountTime, labelBoardID, labelSerialNumber}
 var deviceMetricLabels labels = append(boardLabels, labels{labelModel, labelID, labelUUID, labelPod, labelNamespace, labelContainer}...)
+var deviceStateLabels labels = append(deviceMetricLabels, labels{labelErrType, labelErrMsg, labelEnableRecover}...)
 var memLabels labels = append(deviceMetricLabels, labels{labelMemTotal}...)
 var ignoreLabels labels = append(boardLabels, labels{labelModel}...)
 
@@ -145,6 +150,13 @@ func (ls labels) getNoProps(device Props) []string {
 	return ret
 }
 
+var ErrTypName map[smi.ErrType]string = map[smi.ErrType]string{
+	smi.ERR_TYPE_CHIP:  "chip",
+	smi.ERR_TYPE_BOARD: "board",
+	smi.ERR_TYPE_NODE:  "node",
+	smi.ERR_TYPE_OTHER: "other",
+}
+
 func (ls labels) getValue(device Props, i int) string {
 	switch ls[i] {
 	case labelProductName:
@@ -171,13 +183,29 @@ func (ls labels) getValue(device Props, i int) string {
 		return device.Container
 	case labelNamespace:
 		return device.Namespace
+	case labelErrType:
+		if device.ErrMsg == nil {
+			return ""
+		}
+		return ErrTypName[device.ErrMsg.Typ]
+	case labelErrMsg:
+		if device.ErrMsg == nil {
+			return ""
+		}
+		return device.ErrMsg.Msg
+	case labelEnableRecover:
+		if device.ErrMsg == nil {
+			return ""
+		}
+		return strconv.Itoa(int(device.ErrMsg.EnableRecover))
 	default:
 		panic("unknown label")
 	}
 }
 
 func (m *DeviceRecorder) reset() {
-	m.lynxiDeviceStates.reset()
+	m.lynxiDeviceState.reset()
+	m.lynxiDeviceException.reset()
 	m.lynxiDeviceMemUsed.reset()
 	m.lynxiDeviceApuUsage.reset()
 	m.lynxiDeviceArmUsage.reset()
@@ -190,7 +218,8 @@ func (m *DeviceRecorder) reset() {
 type Props struct {
 	podresources.ResourceOwner
 	smi.Props
-	ID string
+	ID     string
+	ErrMsg *smi.ErrMsg
 }
 
 func (m *DeviceRecorder) getResoureOwners() (map[string]podresources.ResourceOwner, error) {
@@ -219,31 +248,45 @@ func concurrentExec(fns ...func()) {
 	wg.Wait()
 }
 
+func exceptionMapGetOrNil(m map[uint32]smi.ErrMsg, key uint32) *smi.ErrMsg {
+	if v, ok := m[key]; ok {
+		return &v
+	}
+	return nil
+}
+
 func (m *DeviceRecorder) Record() error {
 	var devices smi.PropsMap
+	var exceptions = make(map[uint32]smi.ErrMsg)
 	var id2ResOwner map[string]podresources.ResourceOwner
 	var smiErr error
+	var drvErr error
 	var resErr error
 	concurrentExec(func() {
 		devices, smiErr = m.smi.GetDevices()
 	}, func() {
+		exceptions, drvErr = m.smi.GetDrvExceptionMap()
+	}, func() {
 		id2ResOwner, resErr = m.getResoureOwners()
 	})
 	GlobalRecorder.LogIfError(smiErr)
+	GlobalRecorder.LogIfError(drvErr)
 	if resErr != nil {
 		GlobalRecorder.LogError(resErr)
 		return resErr
 	}
 	m.reset()
 	for i, props_result := range devices {
+		errMsg := exceptionMapGetOrNil(exceptions, uint32(i))
 		id := strconv.Itoa(int(i))
 		res_owner := id2ResOwner[id]
 		props, err := props_result.Get()
 		GlobalRecorder.LogIfError(err)
 		if props != nil {
-			device := Props{res_owner, *props, id}
+			device := Props{res_owner, *props, id, errMsg}
 			m.devices_cache[int(i)] = device
-			m.lynxiDeviceStates.set(device, StateOK)
+			m.lynxiDeviceState.set(device, StateOK)
+			m.lynxiDeviceException.set(device, StateOK)
 			m.lynxiDeviceMemUsed.set(device, float64(device.Device.MemoryUsed))
 			m.lynxiDeviceApuUsage.set(device, float64(device.Device.ApuUsage))
 			m.lynxiDeviceArmUsage.set(device, float64(device.Device.ArmUsage))
@@ -252,9 +295,9 @@ func (m *DeviceRecorder) Record() error {
 			m.lynxiDeviceCurrentTemp.set(device, float64(device.Device.Temperature))
 			m.lynxiBoardPower.set(device, float64(device.Board.PowerDraw))
 		} else {
-			props := Props{res_owner, smi.Props{}, id}
+			props := Props{res_owner, smi.Props{}, id, errMsg}
 			props.Device.UUID = m.devices_cache[int(i)].Device.UUID
-			m.lynxiDeviceStates.setNoProps(props, StateErr)
+			m.lynxiDeviceState.setNoProps(props, StateErr)
 		}
 	}
 	return nil

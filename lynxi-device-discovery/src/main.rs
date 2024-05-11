@@ -8,7 +8,7 @@ use kube::{
     api::{Patch, PatchParams},
     Api, Client, ResourceExt,
 };
-use lynsmi::{DriverVersion, Props};
+use lyndriver::smi::{DriverVersion, Props};
 use tokio::{
     task::spawn_blocking,
     time::{interval, Duration},

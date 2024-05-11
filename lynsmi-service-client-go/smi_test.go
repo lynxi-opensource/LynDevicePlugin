@@ -12,7 +12,7 @@ func TestLynSMI_GetDevices(t *testing.T) {
 	props, err := smi.GetDevices()
 	assert.Nil(t, err)
 	for id, v := range props {
-		fmt.Println(id, v)
+		fmt.Println(id, v.Ok, v.Err)
 	}
 }
 
@@ -25,6 +25,15 @@ func TestLynSMI_GetDeviceTopologyList(t *testing.T) {
 		return
 	}
 	for _, v := range *list {
+		fmt.Println(v.Ok, v.Err)
+	}
+}
+
+func TestLynSMI_GetDrvExceptionMap(t *testing.T) {
+	smi := LynSMI{}
+	list, err := smi.GetDrvExceptionMap()
+	assert.Nil(t, err)
+	for _, v := range list {
 		fmt.Println(v)
 	}
 }

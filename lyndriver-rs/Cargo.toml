@@ -1,5 +1,5 @@
 [package]
-name = "lynsmi"
+name = "lyndriver"
 version = "0.1.0"
 edition = "2021"
 
@@ -16,5 +16,5 @@ rayon = "1.7.0"
 criterion = "0.5.1"
 
 [[bench]]
-name = "benchmark"
+name = "smi"
 harness = false

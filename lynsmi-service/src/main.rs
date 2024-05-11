@@ -1,7 +1,9 @@
 use axum::extract::State;
 use axum::Json;
 use axum::{routing::get, Router};
-use lynsmi::{DriverVersion, Result};
+use lyndriver::drv::ErrMsg;
+use lyndriver::{smi::DriverVersion, Result};
+use lynsmi_service::drv_exception::{listen, DRV_EXCEPTION_MAP};
 use lynsmi_service::models::*;
 use serde_json::json;
 use std::collections::HashMap;
@@ -10,7 +12,7 @@ use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::Duration;
 use tokio::task::spawn_blocking;
-use tracing::{info, warn};
+use tracing::{error, info, warn};
 
 struct SMIData {
     device_count: i32,
@@ -36,6 +38,15 @@ async fn get_driver_version(State(smi_data): State<Arc<SMIData>>) -> Json<Driver
     Json(smi_data.driver_version.clone())
 }
 
+async fn get_drv_exception_map() -> Json<HashMap<u32, ErrMsg>> {
+    Json(
+        DRV_EXCEPTION_MAP
+            .lock()
+            .expect("lock DRV_EXCEPTION_MAP failed")
+            .clone(),
+    )
+}
+
 async fn get_device_topology_list(State(smi_data): State<Arc<SMIData>>) -> Json<serde_json::Value> {
     if !smi_data.is_support_topology {
         Json(json!(Option::<&[Result<DeviceP2PAttr>]>::None))
@@ -54,10 +65,10 @@ async fn get_device_topology_list(State(smi_data): State<Arc<SMIData>>) -> Json<
 async fn main() -> anyhow::Result<()> {
     tracing_subscriber::fmt::init();
 
-    let smi_lib = lynsmi::Lib::try_default()?;
-    let smi_common = lynsmi::CommonSymbols::new(&smi_lib)?;
-    let smi_props = lynsmi::PropsSymbols::new(&smi_lib)?;
-    let smi_topology = lynsmi::TopologySymbols::new(&smi_lib);
+    let smi_lib = lyndriver::smi::Lib::try_default()?;
+    let smi_common = lyndriver::smi::CommonSymbols::new(&smi_lib)?;
+    let smi_props = lyndriver::smi::PropsSymbols::new(&smi_lib)?;
+    let smi_topology = lyndriver::smi::TopologySymbols::new(&smi_lib);
 
     let device_count = smi_common.get_device_cnt()?;
     info!("device_count {}", device_count);
@@ -77,7 +88,15 @@ async fn main() -> anyhow::Result<()> {
 
     let smi_thread = spawn_blocking(move || {
         thread::scope(|s| {
-            let smi_props = lynsmi::PropsSymbols::new(&smi_lib).expect("init PropsSymbols failed");
+            s.spawn(move || {
+                info!("start listen drv_exception");
+                if let Err(e) = listen() {
+                    error!("listen drv_exception failed {:?}", e);
+                }
+            });
+
+            let smi_props =
+                lyndriver::smi::PropsSymbols::new(&smi_lib).expect("init PropsSymbols failed");
             for device_id in 0..device_count {
                 let smi = smi_props.clone();
                 let smi_data = smi_data.clone();
@@ -85,16 +104,21 @@ async fn main() -> anyhow::Result<()> {
                     info!("start update props for device {}", device_id);
                     loop {
                         let props = smi.get_props(device_id);
+                        let is_err = props.is_err();
                         smi_data
                             .devices
                             .lock()
                             .expect("lock smi_data.devices failed")
                             .insert(device_id, props);
+                        if is_err {
+                            info!("get props for device {} failed", device_id,);
+                            break;
+                        }
                     }
                 });
             }
             if is_support_topology {
-                let smi_topology = lynsmi::TopologySymbols::new(&smi_lib)
+                let smi_topology = lyndriver::smi::TopologySymbols::new(&smi_lib)
                     .expect("support topology but init TopologySymbols failed");
                 s.spawn(move || loop {
                     info!("start get device_topology_list");
@@ -137,6 +161,7 @@ async fn main() -> anyhow::Result<()> {
         .route("/device_count", get(get_device_count))
         .route("/driver_version", get(get_driver_version))
         .route("/device_topology_list", get(get_device_topology_list))
+        .route("/drv_exception_map", get(get_drv_exception_map))
         .with_state(smi_data_clone);
 
     // run our app with hyper, listening globally on port 5432

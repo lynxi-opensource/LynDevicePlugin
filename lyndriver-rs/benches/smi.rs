@@ -1,12 +1,12 @@
 use criterion::{criterion_group, criterion_main, Criterion};
-use lynsmi::*;
+use lyndriver::smi::*;
 use rayon::prelude::*;
 
 fn get_device_props_benchmark(c: &mut Criterion) {
     let lib = Lib::try_default().unwrap();
     let symbols = PropsSymbols::new(&lib).unwrap();
 
-    let mut group = c.benchmark_group("lynsmi");
+    let mut group = c.benchmark_group("smi");
     group.sample_size(10);
     group.bench_function("get_device_props", |b| b.iter(|| symbols.get_props(0)));
     group.finish()

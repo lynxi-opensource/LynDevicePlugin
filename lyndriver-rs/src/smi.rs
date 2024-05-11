@@ -1,9 +1,10 @@
 use crate::errors::*;
+use crate::ffi_convert::*;
 use libloading::{Library, Symbol};
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use std::{
-    ffi::{c_char, c_int, CStr, OsStr},
+    ffi::{c_char, c_int, OsStr},
     fmt::Debug,
     mem::zeroed,
     process::Command,
@@ -99,7 +100,7 @@ struct lynDeviceProperties_t_v2 {
 pub struct Lib(Library);
 
 impl Lib {
-    const DEFAULT_FILENAME: &str = "/usr/lib/libLYNSMICLIENTCOMM.so";
+    const DEFAULT_FILENAME: &'static str = "/usr/lib/libLYNSMICLIENTCOMM.so";
 
     pub fn new<P>(filename: P) -> Result<Self>
     where
@@ -298,10 +299,6 @@ pub struct DeviceProps {
     pub arm_usage: u32,
     pub vic_usage: u32,
     pub ipe_usage: u32,
-}
-
-fn string_from_c(data: &[c_char]) -> Result<String> {
-    unsafe { Ok(CStr::from_ptr(data.as_ptr()).to_str()?.to_owned()) }
 }
 
 const V1_10_2: DriverVersion = DriverVersion(1, 10, 2);

@@ -1,5 +1,8 @@
 pub mod models {
-    use lynsmi::{P2PAttr, Props, Result};
+    use lyndriver::{
+        smi::{P2PAttr, Props},
+        Result,
+    };
     use serde::Serialize;
     use std::collections::HashMap;
 
@@ -12,3 +15,5 @@ pub mod models {
     pub type PropsMap = HashMap<i32, Result<Props>>;
     pub type P2PAttrList = Vec<Result<DeviceP2PAttr>>;
 }
+
+pub mod drv_exception;

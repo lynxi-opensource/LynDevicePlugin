@@ -10,7 +10,7 @@ kube = { version = "0.88.1", features = ["runtime", "derive"] }
 k8s-openapi = { version = "0.21.0", features = ["latest"] }
 anyhow = "1.0.80"
 tokio = { version = "1.36.0", features = ["macros", "rt-multi-thread"] }
-lynsmi = { path = "../lynsmi-rs" }
+lyndriver = { path = "../lyndriver-rs" }
 lynsmi-service = { path = "../lynsmi-service" }
 tracing = "0.1.40"
 tracing-subscriber = "0.3.18"
