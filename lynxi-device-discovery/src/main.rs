@@ -68,6 +68,10 @@ fn get_target_labels(devices: &PropsMap) -> BTreeMap<String, String> {
                     format!("lynxi.com/{}.present", v.device.name),
                     "true".to_string(),
                 );
+                target_labels.insert(
+                    format!("lynxi.com/{}.present", v.board.product_name),
+                    "true".to_string(),
+                );
             }
             DeResult::Err(e) => {
                 warn!("get device props return err: {}", e);

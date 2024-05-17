@@ -12,7 +12,7 @@ use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::Duration;
 use tokio::task::spawn_blocking;
-use tracing::{error, info, warn};
+use tracing::{info, warn};
 
 struct SMIData {
     device_count: i32,
@@ -91,7 +91,7 @@ async fn main() -> anyhow::Result<()> {
             s.spawn(move || {
                 info!("start listen drv_exception");
                 if let Err(e) = listen() {
-                    error!("listen drv_exception failed {:?}", e);
+                    warn!("listen drv_exception failed {:?}", e);
                 }
             });
 
