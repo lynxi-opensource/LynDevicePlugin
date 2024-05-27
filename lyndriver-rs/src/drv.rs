@@ -71,6 +71,7 @@ type ErrCb = fn(*mut RawErrMsg, *mut c_int) -> c_int;
 pub struct ExceptionSymbols<'lib> {
     lynd_get_device_exception: Symbol<'lib, fn(*mut RawErrMsg, *mut c_int) -> c_int>,
     lynd_get_device_current_exception: Symbol<'lib, fn(*mut RawErrMsg, *mut c_int, ErrCb) -> c_int>,
+    lynd_get_device_current_recovery: Symbol<'lib, fn(*mut RawErrMsg, *mut c_int, ErrCb) -> c_int>,
 }
 
 impl<'lib> ExceptionSymbols<'lib> {
@@ -81,6 +82,7 @@ impl<'lib> ExceptionSymbols<'lib> {
                 lynd_get_device_current_exception: lib
                     .0
                     .get(b"lynd_get_device_current_exception")?,
+                lynd_get_device_current_recovery: lib.0.get(b"lynd_get_device_current_recovery")?,
             })
         }
     }
@@ -100,20 +102,24 @@ impl<'lib> ExceptionSymbols<'lib> {
         Ok(ret)
     }
 
-    pub fn get_device_current_exception(&self, cb: ErrCb) -> Result<Vec<ErrMsg>> {
+    pub fn get_device_current_exception(&self, cb: ErrCb) -> Result<()> {
         let mut cnt = 0;
         let mut list: RawErrMsgList = unsafe { zeroed() };
         Error::check((self.lynd_get_device_current_exception)(
             &mut list[0],
             &mut cnt,
             cb,
-        ))?;
-        let mut ret = Vec::new();
-        for raw in list {
-            let err_msg = ErrMsg::try_from(&raw)?;
-            ret.push(err_msg);
-        }
-        Ok(ret)
+        ))
+    }
+
+    pub fn get_device_current_recovery(&self, cb: ErrCb) -> Result<()> {
+        let mut cnt = 0;
+        let mut list: RawErrMsgList = unsafe { zeroed() };
+        Error::check((self.lynd_get_device_current_recovery)(
+            &mut list[0],
+            &mut cnt,
+            cb,
+        ))
     }
 }
 
