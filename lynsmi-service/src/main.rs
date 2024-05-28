@@ -3,7 +3,7 @@ use axum::Json;
 use axum::{routing::get, Router};
 use lyndriver::drv::ErrMsg;
 use lyndriver::{smi::DriverVersion, Result};
-use lynsmi_service::drv_exception::{listen, DRV_EXCEPTION_MAP};
+use lynsmi_service::drv_exception::{listen_exception, listen_recovery, DRV_EXCEPTION_MAP};
 use lynsmi_service::models::*;
 use serde_json::json;
 use std::collections::HashMap;
@@ -90,8 +90,14 @@ async fn main() -> anyhow::Result<()> {
         thread::scope(|s| {
             s.spawn(move || {
                 info!("start listen drv_exception");
-                if let Err(e) = listen() {
+                if let Err(e) = listen_exception() {
                     warn!("listen drv_exception failed {:?}", e);
+                }
+            });
+            s.spawn(move || {
+                info!("start listen drv_recovery");
+                if let Err(e) = listen_recovery() {
+                    warn!("listen drv_recovery failed {:?}", e);
                 }
             });
 
@@ -124,9 +130,8 @@ async fn main() -> anyhow::Result<()> {
                                 break;
                             }
                         }
-                    } else {
-                        thread::sleep(Duration::from_secs(1));
                     }
+                    thread::sleep(Duration::from_secs(3));
                 });
             }
             if is_support_topology {

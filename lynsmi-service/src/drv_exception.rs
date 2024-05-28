@@ -36,7 +36,7 @@ fn cb(raw_err_msgs: *mut RawErrMsg, cnt: *mut c_int) -> c_int {
     0
 }
 
-pub fn listen() -> Result<()> {
+pub fn listen_exception() -> Result<()> {
     let drv_lib = lyndriver::drv::Lib::try_default()?;
     let drv_exception_symbols = drv::ExceptionSymbols::new(&drv_lib)?;
     let exceptions = drv_exception_symbols.get_device_exception()?;
@@ -47,5 +47,12 @@ pub fn listen() -> Result<()> {
     info!("get device exception: {:?}", &exception_map);
     *DRV_EXCEPTION_MAP.lock().unwrap() = exception_map;
     drv_exception_symbols.get_device_current_exception(cb)?;
+    Ok(())
+}
+
+pub fn listen_recovery() -> Result<()> {
+    let drv_lib = lyndriver::drv::Lib::try_default()?;
+    let drv_exception_symbols = drv::ExceptionSymbols::new(&drv_lib)?;
+    drv_exception_symbols.get_device_current_recovery(cb)?;
     Ok(())
 }
