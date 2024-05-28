@@ -44,6 +44,7 @@ pub fn listen() -> Result<()> {
     for e in exceptions {
         exception_map.insert(e.devid, e);
     }
+    info!("get device exception: {:?}", &exception_map);
     *DRV_EXCEPTION_MAP.lock().unwrap() = exception_map;
     drv_exception_symbols.get_device_current_exception(cb)?;
     Ok(())

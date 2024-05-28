@@ -97,6 +97,52 @@ struct lynDeviceProperties_t_v2 {
     processUseMemory: [u64; PROCESS_COUNT_LIMIT],
 }
 
+#[repr(C)]
+#[allow(non_snake_case)]
+struct lynDeviceProperties_t_v3 {
+    boardProductName: [c_char; ARRAY_MAX_LEN],
+    boardBrand: [c_char; ARRAY_MAX_LEN],
+    boardFirmwareVersion: [c_char; ARRAY_MAX_LEN],
+    boardSerialNumber: [c_char; ARRAY_MAX_LEN],
+    boardId: u32,
+    boardChipCount: u32,
+    boardPowerDraw: f32,
+    boardPowerLimit: f32,
+    boardVoltage: f32,
+
+    deviceName: [c_char; ARRAY_MAX_LEN],
+    deviceUuid: [c_char; ARRAY_MAX_LEN],
+    deviceApuClockFrequency: u64,
+    deviceApuClockFrequencyLimit: u64,
+    deviceArmClockFrequency: u64,
+    deviceArmClockFrequencyLimit: u64,
+    deviceMemClockFrequency: u64,
+    deviceMemClockFrequencyLimit: u64,
+    deviceMemoryUsed: u64,
+    deviceMemoryTotal: u64,
+    deviceTemperatureCurrent: i32,
+    deviceTemperatureSlowdown: i32,
+    deviceTemperatureLimit: i32,
+    deviceApuUsageRate: u32,
+    deviceArmUsageRate: u32,
+    deviceVicUsageRate: u32,
+    deviceIpeUsageRate: u32,
+    deviceEccStat: u32,
+    deviceDdrErrorCount: u32,
+    deviceDdrNoErrorCount: u32,
+    deviceVoltage: f32,
+    deviceApuVoltage: u32,
+    pcie_read_bandwidth: f64,
+    pcie_write_bandwidth: f64,
+    ddr_read_bandwidth: f64,
+    ddr_write_bandwidth: f64,
+
+    processCount: u32,
+    pid: [u32; PROCESS_COUNT_LIMIT],
+    processName: [[u8; PROCESS_NAME_LEN]; PROCESS_COUNT_LIMIT],
+    processUseMemory: [u64; PROCESS_COUNT_LIMIT],
+}
+
 pub struct Lib(Library);
 
 impl Lib {
@@ -179,6 +225,7 @@ impl<'lib> TopologySymbols<'lib> {
 pub struct PropsSymbols<'lib> {
     lib_get_device_props_v1: Symbol<'lib, fn(i32, &mut lynDeviceProperties_t_v1) -> c_int>,
     lib_get_device_props_v2: Symbol<'lib, fn(i32, &mut lynDeviceProperties_t_v2) -> c_int>,
+    lib_get_device_props_v3: Symbol<'lib, fn(i32, &mut lynDeviceProperties_t_v3) -> c_int>,
     driver_version: DriverVersion,
 }
 
@@ -194,6 +241,7 @@ impl<'lib> PropsSymbols<'lib> {
             Ok(Self {
                 lib_get_device_props_v1: lib.0.get(b"lynGetDeviceProperties")?,
                 lib_get_device_props_v2: lib.0.get(b"lynGetDeviceProperties")?,
+                lib_get_device_props_v3: lib.0.get(b"lynGetDeviceProperties")?,
                 driver_version: DriverVersion::local()?,
             })
         }
@@ -228,6 +276,7 @@ impl<'lib> PropsSymbols<'lib> {
                 arm_usage: c_device_prop.deviceArmUsageRate,
                 vic_usage: c_device_prop.deviceVicUsageRate,
                 ipe_usage: c_device_prop.deviceIpeUsageRate,
+                ..Default::default()
             },
         })
     }
@@ -257,6 +306,40 @@ impl<'lib> PropsSymbols<'lib> {
                 arm_usage: c_device_prop.deviceArmUsageRate,
                 vic_usage: c_device_prop.deviceVicUsageRate,
                 ipe_usage: c_device_prop.deviceIpeUsageRate,
+                ..Default::default()
+            },
+        })
+    }
+
+    fn get_props_v3(&self, id: i32) -> Result<Props> {
+        let mut c_device_prop: lynDeviceProperties_t_v3 = unsafe { zeroed() };
+        Error::check((self.lib_get_device_props_v3)(
+            id as i32,
+            &mut c_device_prop,
+        ))?;
+        Ok(Props {
+            board: BoardProps {
+                product_name: string_from_c(c_device_prop.boardProductName.as_ref())?,
+                brand: string_from_c(c_device_prop.boardBrand.as_ref())?,
+                serial_number: string_from_c(c_device_prop.boardSerialNumber.as_ref())?,
+                id: c_device_prop.boardId,
+                chip_count: c_device_prop.boardChipCount,
+                power_draw: c_device_prop.boardPowerDraw,
+            },
+            device: DeviceProps {
+                name: string_from_c(c_device_prop.deviceName.as_ref())?,
+                uuid: string_from_c(c_device_prop.deviceUuid.as_ref())?,
+                memory_used: c_device_prop.deviceMemoryUsed,
+                memory_total: c_device_prop.deviceMemoryTotal,
+                temperature: c_device_prop.deviceTemperatureCurrent,
+                apu_usage: c_device_prop.deviceApuUsageRate,
+                arm_usage: c_device_prop.deviceArmUsageRate,
+                vic_usage: c_device_prop.deviceVicUsageRate,
+                ipe_usage: c_device_prop.deviceIpeUsageRate,
+                pcie_read_bandwidth: Some(c_device_prop.pcie_read_bandwidth),
+                pcie_write_bandwidth: Some(c_device_prop.pcie_write_bandwidth),
+                ddr_read_bandwidth: Some(c_device_prop.ddr_read_bandwidth),
+                ddr_write_bandwidth: Some(c_device_prop.ddr_write_bandwidth),
             },
         })
     }
@@ -264,7 +347,8 @@ impl<'lib> PropsSymbols<'lib> {
     pub fn get_props(&self, id: i32) -> Result<Props> {
         match &self.driver_version {
             v if v < &V1_10_2 => self.get_props_v1(id),
-            v if v >= &V1_10_2 => self.get_props_v2(id),
+            v if v >= &V1_10_2 && v < &V1_19_0 => self.get_props_v2(id),
+            v if v >= &V1_19_0 => self.get_props_v3(id),
             _ => unreachable!(),
         }
     }
@@ -277,7 +361,7 @@ pub struct P2PAttr {
 }
 
 #[non_exhaustive]
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
 pub struct BoardProps {
     pub product_name: String,
     pub brand: String,
@@ -288,7 +372,7 @@ pub struct BoardProps {
 }
 
 #[non_exhaustive]
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
 pub struct DeviceProps {
     pub name: String,
     pub uuid: String,
@@ -299,9 +383,14 @@ pub struct DeviceProps {
     pub arm_usage: u32,
     pub vic_usage: u32,
     pub ipe_usage: u32,
+    pub pcie_read_bandwidth: Option<f64>,
+    pub pcie_write_bandwidth: Option<f64>,
+    pub ddr_read_bandwidth: Option<f64>,
+    pub ddr_write_bandwidth: Option<f64>,
 }
 
 const V1_10_2: DriverVersion = DriverVersion(1, 10, 2);
+const V1_19_0: DriverVersion = DriverVersion(1, 19, 0);
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub struct DriverVersion(pub usize, pub usize, pub usize);

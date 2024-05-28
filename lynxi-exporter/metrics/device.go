@@ -39,17 +39,21 @@ var _ Recorder = &DeviceRecorder{}
 
 // Device 定义和记录所有device相关的Prometheus指标
 type DeviceRecorder struct {
-	lynxiDeviceState       gaugeVec
-	lynxiDeviceMemUsed     gaugeVec
-	lynxiDeviceApuUsage    gaugeVec
-	lynxiDeviceArmUsage    gaugeVec
-	lynxiDeviceVicUsage    gaugeVec
-	lynxiDeviceIpeUsage    gaugeVec
-	lynxiDeviceCurrentTemp gaugeVec
-	lynxiBoardPower        gaugeVec
-	smi                    smi.LynSMI
-	podRes                 *podresources.PodResources
-	devices_cache          map[int]Props
+	lynxiDeviceState        gaugeVec
+	lynxiDeviceMemUsed      gaugeVec
+	lynxiDeviceApuUsage     gaugeVec
+	lynxiDeviceArmUsage     gaugeVec
+	lynxiDeviceVicUsage     gaugeVec
+	lynxiDeviceIpeUsage     gaugeVec
+	lynxiDeviceCurrentTemp  gaugeVec
+	lynxiBoardPower         gaugeVec
+	lynxiPCIEReadBandwidth  gaugeVec
+	lynxiPCIEWriteBandwidth gaugeVec
+	lynxiDDRReadBandwidth   gaugeVec
+	lynxiDDRWriteBandwidth  gaugeVec
+	smi                     smi.LynSMI
+	podRes                  *podresources.PodResources
+	devices_cache           map[int]Props
 }
 
 // NewDeviceRecorder 构造一个DeviceRecorder并初始化指标
@@ -87,6 +91,18 @@ func NewDeviceRecorder(smi_handle smi.LynSMI, podRes *podresources.PodResources)
 			Name: "lynxi_board_power",
 			Help: "The power of the board with unit mW. HM100 is unsupported, and the value is always 0",
 		}, boardLabels),
+		lynxiPCIEReadBandwidth: newGaugeVec(prometheus.GaugeOpts{
+			Name: "lynxi_pcie_read_bandwidth",
+		}, deviceMetricLabels),
+		lynxiPCIEWriteBandwidth: newGaugeVec(prometheus.GaugeOpts{
+			Name: "lynxi_pcie_write_bandwidth",
+		}, deviceMetricLabels),
+		lynxiDDRReadBandwidth: newGaugeVec(prometheus.GaugeOpts{
+			Name: "lynxi_ddr_read_bandwidth",
+		}, deviceMetricLabels),
+		lynxiDDRWriteBandwidth: newGaugeVec(prometheus.GaugeOpts{
+			Name: "lynxi_ddr_write_bandwidth",
+		}, deviceMetricLabels),
 		smi:           smi_handle,
 		podRes:        podRes,
 		devices_cache: make(map[int]Props),
@@ -211,6 +227,10 @@ func (m *DeviceRecorder) reset() {
 	m.lynxiDeviceIpeUsage.reset()
 	m.lynxiDeviceCurrentTemp.reset()
 	m.lynxiBoardPower.reset()
+	m.lynxiPCIEReadBandwidth.reset()
+	m.lynxiPCIEWriteBandwidth.reset()
+	m.lynxiDDRReadBandwidth.reset()
+	m.lynxiDDRWriteBandwidth.reset()
 }
 
 type Props struct {
@@ -291,6 +311,18 @@ func (m *DeviceRecorder) Record() error {
 			m.lynxiDeviceIpeUsage.set(device, float64(device.Device.IpeUsage))
 			m.lynxiDeviceCurrentTemp.set(device, float64(device.Device.Temperature))
 			m.lynxiBoardPower.set(device, float64(device.Board.PowerDraw))
+			if device.Device.PcieReadBandwidth != nil {
+				m.lynxiPCIEReadBandwidth.set(device, float64(*device.Device.PcieReadBandwidth))
+			}
+			if device.Device.PcieWriteBandwidth != nil {
+				m.lynxiPCIEWriteBandwidth.set(device, float64(*device.Device.PcieWriteBandwidth))
+			}
+			if device.Device.DdrReadBandwidth != nil {
+				m.lynxiDDRReadBandwidth.set(device, float64(*device.Device.DdrReadBandwidth))
+			}
+			if device.Device.DdrWriteBandwidth != nil {
+				m.lynxiDDRWriteBandwidth.set(device, float64(*device.Device.DdrWriteBandwidth))
+			}
 		} else {
 			props := Props{res_owner, smi.Props{}, id, errMsg}
 			props.Device.UUID = m.devices_cache[int(i)].Device.UUID

@@ -20,15 +20,19 @@ type Props struct {
 
 // DeviceProps 描述设备的基本信息
 type DeviceProps struct {
-	Name        string `json:"name"`         // 芯片型号，例如KA200
-	UUID        string `json:"uuid"`         // 设备的UUID
-	MemoryUsed  uint64 `json:"memory_used"`  // 内存使用量，单位为字节
-	MemoryTotal uint64 `json:"memory_total"` // 内存总量，单位为字节
-	Temperature int32  `json:"temperature"`  // 当前芯片温度，单位为摄氏度
-	ApuUsage    uint32 `json:"apu_usage"`    // APU使用率，单位为百分比
-	ArmUsage    uint32 `json:"arm_usage"`    // ARM使用率，单位为百分比
-	VicUsage    uint32 `json:"vic_usage"`    // VIC使用率，单位为百分比
-	IpeUsage    uint32 `json:"ipe_usage"`    // IPE使用率，单位为百分比
+	Name               string   `json:"name"`         // 芯片型号，例如KA200
+	UUID               string   `json:"uuid"`         // 设备的UUID
+	MemoryUsed         uint64   `json:"memory_used"`  // 内存使用量，单位为字节
+	MemoryTotal        uint64   `json:"memory_total"` // 内存总量，单位为字节
+	Temperature        int32    `json:"temperature"`  // 当前芯片温度，单位为摄氏度
+	ApuUsage           uint32   `json:"apu_usage"`    // APU使用率，单位为百分比
+	ArmUsage           uint32   `json:"arm_usage"`    // ARM使用率，单位为百分比
+	VicUsage           uint32   `json:"vic_usage"`    // VIC使用率，单位为百分比
+	IpeUsage           uint32   `json:"ipe_usage"`    // IPE使用率，单位为百分比
+	PcieReadBandwidth  *float64 `json:"pcie_read_bandwidth"`
+	PcieWriteBandwidth *float64 `json:"pcie_write_bandwidth"`
+	DdrReadBandwidth   *float64 `json:"ddr_read_bandwidth"`
+	DdrWriteBandwidth  *float64 `json:"ddr_write_bandwidth"`
 }
 
 // BoardProps 描述一个板子的信息

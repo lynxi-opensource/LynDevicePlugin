@@ -100,33 +100,32 @@ async fn main() -> anyhow::Result<()> {
             for device_id in 0..device_count {
                 let smi = smi_props.clone();
                 let smi_data = smi_data.clone();
-                s.spawn(move || {
-                    info!("start update props for device {}", device_id);
-                    loop {
-                        if let None = DRV_EXCEPTION_MAP
-                            .lock()
-                            .expect("lock DRV_EXCEPTION_MAP failed")
-                            .get(&(device_id as u32))
-                        {
-                            loop {
-                                let props = smi.get_props(device_id);
-                                let is_err = props.is_err();
-                                smi_data
-                                    .devices
-                                    .lock()
-                                    .expect("lock smi_data.devices failed")
-                                    .insert(device_id, props);
-                                if is_err {
-                                    info!(
-                                        "get props for device {} failed, retry after chip recovery",
-                                        device_id
-                                    );
-                                    break;
-                                }
+                s.spawn(move || loop {
+                    let no_exception = DRV_EXCEPTION_MAP
+                        .lock()
+                        .expect("lock DRV_EXCEPTION_MAP failed")
+                        .get(&(device_id as u32))
+                        .is_none();
+                    if no_exception {
+                        info!("start update props for device {}", device_id);
+                        loop {
+                            let props = smi.get_props(device_id);
+                            let is_err = props.is_err();
+                            smi_data
+                                .devices
+                                .lock()
+                                .expect("lock smi_data.devices failed")
+                                .insert(device_id, props);
+                            if is_err {
+                                info!(
+                                    "get props for device {} failed, retry after chip recovery",
+                                    device_id
+                                );
+                                break;
                             }
-                        } else {
-                            thread::sleep(Duration::from_secs(1));
                         }
+                    } else {
+                        thread::sleep(Duration::from_secs(1));
                     }
                 });
             }
