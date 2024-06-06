@@ -73,22 +73,13 @@ func (m *Service) ListAndWatch(_ *pluginapi.Empty, sender pluginapi.DevicePlugin
 	}
 }
 
-func getBestDeviceList(scoreMap map[[2]string][2]int32, must []string, availible []string, size int32) []string {
-	ret := make([]string, 0, len(must))
+func getBestDeviceList(scoreMap map[[2]int][2]int32, must []int, availible []int, size int32) []int {
+	ret := make([]int, 0, len(must))
 	ret = append(ret, must...)
 	maxScore := int32(-1)
 	minDist := int32(math.MaxInt32)
-	maxScoreDeviceList := make([]string, 0)
-	forEachDeviceList(ret, availible, size, func(selected []string) bool {
-		score := int32(0)
-		dist := int32(0)
-		for _, d1 := range selected {
-			for _, d2 := range selected {
-				v := scoreMap[[2]string{d1, d2}]
-				score += v[0]
-				dist += v[1]
-			}
-		}
+	maxScoreDeviceList := make([]int, 0)
+	forEachDeviceList(scoreMap, 0, 0, ret, availible, size, func(score int32, dist int32, selected []int) bool {
 		if score > maxScore || (score == maxScore && dist < minDist) {
 			maxScore = score
 			minDist = dist
@@ -119,7 +110,7 @@ func getScore(attr lynsmi.P2PAttr) (int32, int32) {
 	return 0, 0
 }
 
-func getScoreMap(smi lynsmi.LynSMI) (map[[2]string][2]int32, error) {
+func getScoreMap(smi lynsmi.LynSMI) (map[[2]int][2]int32, error) {
 	list, err := smi.GetDeviceTopologyList()
 	if err != nil {
 		return nil, fmt.Errorf("smi GetDeviceTopologyList err: %w", err)
@@ -127,7 +118,7 @@ func getScoreMap(smi lynsmi.LynSMI) (map[[2]string][2]int32, error) {
 	if list == nil {
 		return nil, fmt.Errorf("smi GetDeviceTopologyList return nil")
 	}
-	scoreMap := make(map[[2]string][2]int32, 0)
+	scoreMap := make(map[[2]int][2]int32, 0)
 	for _, v := range *list {
 		attr, err := v.Get()
 		if err != nil {
@@ -135,10 +126,10 @@ func getScoreMap(smi lynsmi.LynSMI) (map[[2]string][2]int32, error) {
 			continue
 		}
 		linkScore, dist := getScore(attr.Attr)
-		pair := [2]string{strconv.Itoa(int(attr.DevicePair[0])), strconv.Itoa(int(attr.DevicePair[1]))}
+		pair := [2]int{int(attr.DevicePair[0]), int(attr.DevicePair[1])}
 		score := [2]int32{linkScore, dist}
 		scoreMap[pair] = score
-		scoreMap[[2]string{pair[1], pair[0]}] = score
+		scoreMap[[2]int{pair[1], pair[0]}] = score
 	}
 	return scoreMap, nil
 }
@@ -177,14 +168,46 @@ func (m *Service) GetPreferredAllocation(ctx context.Context, req *pluginapi.Pre
 			continue
 		}
 
-		maxScoreDeviceList := getBestDeviceList(scoreMap, containerReq.MustIncludeDeviceIDs, availableDeviceIDs, containerReq.AllocationSize)
+		must, err := sliceString2Int(containerReq.MustIncludeDeviceIDs)
+		if err != nil {
+			log.Println("sliceString2Int: ", containerReq.MustIncludeDeviceIDs, "; err: ", err)
+			continue
+		}
+		available, err := sliceString2Int(availableDeviceIDs)
+		if err != nil {
+			log.Println("sliceString2Int: ", availableDeviceIDs, "; err: ", err)
+			continue
+		}
+		maxScoreDeviceList := getBestDeviceList(scoreMap, must, available, containerReq.AllocationSize)
+		maxScoreDeviceListString := sliceInt2String(maxScoreDeviceList)
 		containerResponses[i] = &pluginapi.ContainerPreferredAllocationResponse{
-			DeviceIDs: maxScoreDeviceList,
+			DeviceIDs: maxScoreDeviceListString,
 		}
 		log.Println("allocation success:", maxScoreDeviceList)
-		allocatedDeviceIDs = append(allocatedDeviceIDs, maxScoreDeviceList...)
+		allocatedDeviceIDs = append(allocatedDeviceIDs, maxScoreDeviceListString...)
 	}
 	return &pluginapi.PreferredAllocationResponse{ContainerResponses: containerResponses}, nil
+}
+
+func sliceString2Int(src []string) (ret []int, err error) {
+	ret = make([]int, 0, len(src))
+	for _, v := range src {
+		n, err := strconv.Atoi(v)
+		if err != nil {
+			return nil, err
+		}
+		ret = append(ret, n)
+	}
+	return ret, nil
+}
+
+func sliceInt2String(src []int) (ret []string) {
+	ret = make([]string, 0, len(src))
+	for _, v := range src {
+		n := strconv.Itoa(v)
+		ret = append(ret, n)
+	}
+	return ret
 }
 
 func sliceSub[T comparable](a []T, b []T) (ret []T) {
@@ -203,14 +226,20 @@ func sliceSub[T comparable](a []T, b []T) (ret []T) {
 	return
 }
 
-func forEachDeviceList(selected []string, availible []string, size int32, cb func(selected []string) bool) {
+func forEachDeviceList(scoreMap map[[2]int][2]int32, score int32, dist int32, selected []int, availible []int, size int32, cb func(score int32, dist int32, selected []int) bool) {
 	if size == 0 {
-		cb(selected)
+		cb(score, dist, selected)
+		return
 	}
 	length := len(selected)
 	for i, v := range availible {
 		selected = append(selected, v)
-		forEachDeviceList(selected, availible[i+1:], size-1, cb)
+		for _, id := range selected {
+			v := scoreMap[[2]int{id, v}]
+			score += v[0]
+			dist += v[1]
+		}
+		forEachDeviceList(scoreMap, score, dist, selected, availible[i+1:], size-1, cb)
 		selected = selected[:length]
 	}
 }
