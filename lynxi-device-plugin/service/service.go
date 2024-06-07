@@ -8,6 +8,7 @@ import (
 	"lyndeviceplugin/lynsmi-service-client-go"
 	"lyndeviceplugin/lynxi-device-plugin/allocator"
 	"math"
+	"sort"
 	"strconv"
 	"time"
 
@@ -74,19 +75,111 @@ func (m *Service) ListAndWatch(_ *pluginapi.Empty, sender pluginapi.DevicePlugin
 }
 
 func getBestDeviceList(scoreMap map[[2]int][2]int32, must []int, availible []int, size int32) []int {
+	if size == 0 {
+		return must
+	}
+	if len(availible) == int(size) {
+		return availible
+	}
+
 	ret := make([]int, 0, len(must))
 	ret = append(ret, must...)
 	maxScore := int32(-1)
 	minDist := int32(math.MaxInt32)
 	maxScoreDeviceList := make([]int, 0)
+	count := 0
 	forEachDeviceList(scoreMap, 0, 0, ret, availible, size, func(score int32, dist int32, selected []int) bool {
 		if score > maxScore || (score == maxScore && dist < minDist) {
 			maxScore = score
 			minDist = dist
 			maxScoreDeviceList = append(maxScoreDeviceList[:0], selected...)
 		}
+		count++
+		if count%1000000 == 0 {
+			log.Println("count ", count)
+		}
 		return true
 	})
+	log.Println("selected", maxScoreDeviceList, "score", maxScore, "dist", minDist)
+	return maxScoreDeviceList
+}
+
+func getBestDevice(scoreMap map[[2]int][2]int32, selected []int, availible []int) (int, int32, int32) {
+	maxScore := int32(-1)
+	minDist := int32(math.MaxInt32)
+	bestDeviceIndex := -1
+	for i, availibleDevice := range availible {
+		score := int32(0)
+		dist := int32(0)
+		for _, selectedDevice := range selected {
+			scoreDist := scoreMap[[2]int{availibleDevice, selectedDevice}]
+			score += scoreDist[0]
+			dist += scoreDist[1]
+		}
+		if score > maxScore || score == maxScore && dist < minDist {
+			maxScore = score
+			minDist = dist
+			bestDeviceIndex = i
+		}
+	}
+	return bestDeviceIndex, maxScore, minDist
+}
+
+func remove(a []int, index int) []int {
+	if index != len(a)-1 {
+		copy(a[index:], a[index+1:])
+	}
+	return a[:len(a)-1]
+}
+
+func getDeviceListByGreedyPolicy(scoreMap map[[2]int][2]int32, must []int, availible []int, size int32) []int {
+	if size == 0 {
+		return must
+	}
+	if len(availible) == int(size) {
+		return availible
+	}
+
+	sort.Ints(availible)
+	if len(must) != 0 {
+		selected := make([]int, len(must))
+		copy(selected, must)
+		nextAvailable := make([]int, len(availible))
+		copy(nextAvailable, availible)
+		for i := 0; i < int(size); i++ {
+			deviceIndex, _, _ := getBestDevice(scoreMap, selected, nextAvailable)
+			device := nextAvailable[deviceIndex]
+			nextAvailable = remove(nextAvailable, deviceIndex)
+			selected = append(selected, device)
+		}
+		return selected
+	}
+
+	maxScore := int32(-1)
+	minDist := int32(math.MaxInt32)
+	maxScoreDeviceList := make([]int, 0)
+	for i := 0; i < len(availible); i++ {
+		selected := make([]int, 1)
+		selected[0] = availible[i]
+		nextAvailable := make([]int, len(availible))
+		copy(nextAvailable, availible)
+		nextAvailable = remove(nextAvailable, i)
+		score := int32(0)
+		dist := int32(0)
+		for i := 0; i < int(size-1); i++ {
+			deviceIndex, deviceScore, deviceDist := getBestDevice(scoreMap, selected, nextAvailable)
+			device := nextAvailable[deviceIndex]
+			score += deviceScore
+			dist += deviceDist
+			nextAvailable = remove(nextAvailable, deviceIndex)
+			selected = append(selected, device)
+		}
+		if score > maxScore || score == maxScore && dist < minDist {
+			maxScore = score
+			minDist = dist
+			maxScoreDeviceList = selected
+		}
+	}
 	return maxScoreDeviceList
 }
 
@@ -178,7 +271,7 @@ func (m *Service) GetPreferredAllocation(ctx context.Context, req *pluginapi.Pre
 			log.Println("sliceString2Int: ", availableDeviceIDs, "; err: ", err)
 			continue
 		}
-		maxScoreDeviceList := getBestDeviceList(scoreMap, must, available, containerReq.AllocationSize)
+		maxScoreDeviceList := getDeviceListByGreedyPolicy(scoreMap, must, available, containerReq.AllocationSize)
 		maxScoreDeviceListString := sliceInt2String(maxScoreDeviceList)
 		containerResponses[i] = &pluginapi.ContainerPreferredAllocationResponse{
 			DeviceIDs: maxScoreDeviceListString,
