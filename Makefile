@@ -1,7 +1,10 @@
-version = 1.7.1
+version = 1.8.0
 
 build:
 	./build.sh
+
+save:
+	./save.sh
 
 chart:
 	mkdir release -p
