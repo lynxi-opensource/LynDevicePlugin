@@ -43,7 +43,8 @@ type ResourceOwner struct {
 
 type Resource struct {
 	ResourceOwner
-	IDs []string
+	IDs    []string
+	HP280s []string
 }
 
 func (m *PodResources) get() (ret []Resource, err error) {
@@ -54,14 +55,17 @@ func (m *PodResources) get() (ret []Resource, err error) {
 	for _, pod := range resp.GetPodResources() {
 		for _, container := range pod.GetContainers() {
 			res := Resource{
-				ResourceOwner{pod.GetName(), pod.GetNamespace(), container.GetName()}, nil,
+				ResourceOwner{pod.GetName(), pod.GetNamespace(), container.GetName()}, nil, nil,
 			}
 			for _, device := range container.GetDevices() {
 				if device.GetResourceName() == "lynxi.com/device" {
 					res.IDs = append(res.IDs, device.GetDeviceIds()...)
 				}
+				if device.GetResourceName() == "lynxi.com/HP280" {
+					res.HP280s = append(res.HP280s, device.GetDeviceIds()...)
+				}
 			}
-			if len(res.IDs) > 0 {
+			if len(res.IDs) > 0 || len(res.HP280s) > 0 {
 				ret = append(ret, res)
 			}
 		}

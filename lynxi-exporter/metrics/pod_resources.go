@@ -16,6 +16,7 @@ var _ Recorder = &PodContainerRecorder{}
 // States 定义和记录所有状态相关的Prometheus指标
 type PodContainerRecorder struct {
 	lynxiPodContainerDeviceCount *prometheus.GaugeVec
+	lynxiPodContainerHP280Count  *prometheus.GaugeVec
 	deviceID2UUID                map[string]string
 	smi                          smi.LynSMI
 	podRes                       *podresources.PodResources
@@ -27,7 +28,11 @@ func NewPodContainerRecorder(smi smi.LynSMI, podRes *podresources.PodResources) 
 		lynxiPodContainerDeviceCount: promauto.NewGaugeVec(prometheus.GaugeOpts{
 			Name: "lynxi_pod_container_device_count",
 			Help: "The device ids and number of devices for each pod container.",
-		}, labelsForPodContainer()),
+		}, labelsForPodContainerDevice()),
+		lynxiPodContainerHP280Count: promauto.NewGaugeVec(prometheus.GaugeOpts{
+			Name: "lynxi_pod_container_hp280_count",
+			Help: "The device ids and number of devices for each pod container.",
+		}, labelsForPodContainerHP280()),
 		deviceID2UUID: make(map[string]string),
 		smi:           smi,
 		podRes:        podRes,
@@ -35,8 +40,12 @@ func NewPodContainerRecorder(smi smi.LynSMI, podRes *podresources.PodResources) 
 	return ret
 }
 
-func labelsForPodContainer() []string {
+func labelsForPodContainerDevice() []string {
 	return []string{"owner_pod", "owner_container", "owner_namespace", "device_ids", "uuids"}
+}
+
+func labelsForPodContainerHP280() []string {
+	return []string{"owner_pod", "owner_container", "owner_namespace", "serial_numbers"}
 }
 
 func (m PodContainerRecorder) updateUUIDs() {
@@ -79,11 +88,18 @@ func (m *PodContainerRecorder) Record() error {
 	} else {
 		m.lynxiPodContainerDeviceCount.Reset()
 		for _, res := range resp {
-			sort.Sort(StringNumberSlice(res.IDs))
-			m.lynxiPodContainerDeviceCount.WithLabelValues(
-				res.Pod, res.Container, res.Namespace,
-				strings.Join(res.IDs, ","),
-				strings.Join(m.getUUIDs(res.IDs), ",")).Set(float64(len(res.IDs)))
+			if len(res.IDs) != 0 {
+				sort.Sort(StringNumberSlice(res.IDs))
+				m.lynxiPodContainerDeviceCount.WithLabelValues(
+					res.Pod, res.Container, res.Namespace,
+					strings.Join(res.IDs, ","),
+					strings.Join(m.getUUIDs(res.IDs), ",")).Set(float64(len(res.IDs)))
+			}
+			if len(res.HP280s) != 0 {
+				m.lynxiPodContainerHP280Count.WithLabelValues(
+					res.Pod, res.Container, res.Namespace,
+					strings.Join(res.HP280s, ",")).Set(float64(len(res.HP280s)))
+			}
 		}
 	}
 	return nil

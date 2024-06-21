@@ -15,10 +15,10 @@ import (
 	pluginapi "k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
 )
 
-var _ pluginapi.DevicePluginServer = &Service{}
+var _ Service = &DeviceAllocationService{}
 
-// Service 实现了pluginapi.DevicePluginServer，提供grpc接口实现
-type Service struct {
+// DeviceAllocationService 实现了pluginapi.DevicePluginServer，提供grpc接口实现
+type DeviceAllocationService struct {
 	allocator allocator.Allocator
 	smi       lynsmi.LynSMI
 	deviceMap map[int]bool
@@ -26,8 +26,8 @@ type Service struct {
 }
 
 // NewService 构造一个Service
-func NewService(allocator allocator.Allocator, pollInterval time.Duration) *Service {
-	return &Service{
+func NewDeviceAllocationService(allocator allocator.Allocator, pollInterval time.Duration) *DeviceAllocationService {
+	return &DeviceAllocationService{
 		smi:       lynsmi.LynSMI{},
 		allocator: allocator,
 		deviceMap: make(map[int]bool),
@@ -35,9 +35,17 @@ func NewService(allocator allocator.Allocator, pollInterval time.Duration) *Serv
 	}
 }
 
+func (m *DeviceAllocationService) GetResourceName() string {
+	return "lynxi.com/device"
+}
+
+func (m *DeviceAllocationService) GetOptions() *pluginapi.DevicePluginOptions {
+	return &pluginapi.DevicePluginOptions{GetPreferredAllocationAvailable: true}
+}
+
 // GetDevicePluginOptions 返回PreStartRequired和GetPreferredAllocationAvailable选项为false
-func (m *Service) GetDevicePluginOptions(context.Context, *pluginapi.Empty) (*pluginapi.DevicePluginOptions, error) {
-	return &pluginapi.DevicePluginOptions{GetPreferredAllocationAvailable: true}, nil
+func (m *DeviceAllocationService) GetDevicePluginOptions(context.Context, *pluginapi.Empty) (*pluginapi.DevicePluginOptions, error) {
+	return m.GetOptions(), nil
 }
 
 func isHealthy(isOn bool) string {
@@ -59,7 +67,7 @@ func smiDevicesToPluginDevices(devices lynsmi.PropsMap) (ret []*pluginapi.Device
 }
 
 // ListAndWatch 返回所有板卡信息
-func (m *Service) ListAndWatch(_ *pluginapi.Empty, sender pluginapi.DevicePlugin_ListAndWatchServer) error {
+func (m *DeviceAllocationService) ListAndWatch(_ *pluginapi.Empty, sender pluginapi.DevicePlugin_ListAndWatchServer) error {
 	ticker := time.NewTicker(m.interval)
 	log.Println("start send device status")
 	for {
@@ -228,7 +236,7 @@ func getScoreMap(smi lynsmi.LynSMI) (map[[2]int][2]int32, error) {
 }
 
 // GetPreferredAllocation
-func (m *Service) GetPreferredAllocation(ctx context.Context, req *pluginapi.PreferredAllocationRequest) (*pluginapi.PreferredAllocationResponse, error) {
+func (m *DeviceAllocationService) GetPreferredAllocation(ctx context.Context, req *pluginapi.PreferredAllocationRequest) (*pluginapi.PreferredAllocationResponse, error) {
 	containerRequests := req.GetContainerRequests()
 	if containerRequests == nil {
 		return &pluginapi.PreferredAllocationResponse{}, nil
@@ -338,7 +346,7 @@ func forEachDeviceList(scoreMap map[[2]int][2]int32, score int32, dist int32, se
 }
 
 // Allocate 根据设备id分配板卡
-func (m Service) Allocate(_ context.Context, req *pluginapi.AllocateRequest) (*pluginapi.AllocateResponse, error) {
+func (m DeviceAllocationService) Allocate(_ context.Context, req *pluginapi.AllocateRequest) (*pluginapi.AllocateResponse, error) {
 	ret := pluginapi.AllocateResponse{}
 	for _, r := range req.GetContainerRequests() {
 		ret.ContainerResponses = append(ret.ContainerResponses, m.allocator.Allocate(r))
@@ -347,6 +355,6 @@ func (m Service) Allocate(_ context.Context, req *pluginapi.AllocateRequest) (*p
 }
 
 // PreStartContainer 没有任何操作
-func (m *Service) PreStartContainer(context.Context, *pluginapi.PreStartContainerRequest) (*pluginapi.PreStartContainerResponse, error) {
+func (m *DeviceAllocationService) PreStartContainer(context.Context, *pluginapi.PreStartContainerRequest) (*pluginapi.PreStartContainerResponse, error) {
 	return nil, nil
 }

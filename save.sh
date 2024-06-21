@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-version="1.8.0"
+version="1.9.0"
 archs=(amd64 arm64)
 targets=(lynxi-device-plugin lynxi-exporter apu-feature-discovery lynsmi-service lynxi-device-discovery)
 image_prefix=192.168.9.41:5000

@@ -3,6 +3,7 @@ package server
 
 import (
 	"log"
+	"lyndeviceplugin/lynxi-device-plugin/service"
 	"net"
 	"os"
 	"os/signal"
@@ -25,13 +26,13 @@ func newOSWatcher(sigs ...os.Signal) chan os.Signal {
 // Server 描述了与kubelet建立通信所需的接口和参数
 type Server interface {
 	// Serve 启动server，在server启动后注册到kubelet，并阻塞到server退出
-	Run(socket, resourceName string, service pluginapi.DevicePluginServer) error
+	Run(socket, resourceName string, svc pluginapi.DevicePluginServer) error
 }
 
 type ServerImp struct {
 }
 
-func (m *ServerImp) Run(socket, resourceName string, service pluginapi.DevicePluginServer) error {
+func (m *ServerImp) Run(socket string, svc service.Service) error {
 	log.Println("Starting OS watcher.")
 	sigs := newOSWatcher(syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
 
@@ -42,12 +43,12 @@ restart:
 		srv.Stop()
 	} else {
 		srv = &LynxiServer{
-			resourceName: resourceName,
+			resourceName: svc.GetResourceName(),
 			socket:       path.Join(pluginapi.DevicePluginPath, socket),
 			// These will be reinitialized every
 			// time the plugin server is restarted.
 			server: nil,
-			plugin: &service,
+			plugin: svc,
 		}
 	}
 
@@ -81,10 +82,10 @@ events:
 }
 
 type LynxiServer struct {
-	socket       string                        // local grpc socket file name
-	resourceName string                        // 用于k8s分配资源时使用的资源名
-	server       *grpc.Server                  // grpc server
-	plugin       *pluginapi.DevicePluginServer // k8s plugin
+	socket       string          // local grpc socket file name
+	resourceName string          // 用于k8s分配资源时使用的资源名
+	server       *grpc.Server    // grpc server
+	plugin       service.Service // k8s plugin
 }
 
 func (m *LynxiServer) Start() error {
@@ -131,7 +132,7 @@ func (m *LynxiServer) Serve() error {
 		return err
 	}
 
-	pluginapi.RegisterDevicePluginServer(m.server, *m.plugin)
+	pluginapi.RegisterDevicePluginServer(m.server, m.plugin)
 
 	go func() {
 		lastCrashTime := time.Now()
@@ -185,9 +186,7 @@ func (m *LynxiServer) Register() error {
 		Version:      pluginapi.Version,
 		Endpoint:     path.Base(m.socket),
 		ResourceName: m.resourceName,
-		Options: &pluginapi.DevicePluginOptions{
-			GetPreferredAllocationAvailable: true,
-		},
+		Options:      m.plugin.GetOptions(),
 	}
 
 	_, err = client.Register(context.Background(), reqt)
