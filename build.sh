@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-version="1.9.0"
+version="1.8.0"
 archs=(amd64 arm64)
 go_targets=(lynxi-device-plugin lynxi-exporter apu-feature-discovery)
 out_dir=bin

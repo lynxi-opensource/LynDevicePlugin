@@ -1,13 +1,10 @@
-version = 1.9.0
+version = 1.8.0
 
 build:
 	./build.sh
 
 save:
 	./save.sh
-
-load_amd64:
-	./load_amd64.sh
 
 chart:
 	mkdir release -p
@@ -23,7 +20,7 @@ example-uninstall:
 	kubectl delete -f example.yml
 
 install:
-	helm install -n device-plugin --set imagePullPolicy=Never lynxi-device-plugin release/LynDevicePlugin-${version}.tgz
+	helm install -n device-plugin --set imagePullPolicy=Always lynxi-device-plugin release/LynDevicePlugin-${version}.tgz
 
 install-no-service-monitor:
 	helm install -n device-plugin --set imagePullPolicy=Always --set lynxiExporter.serviceMonitor.enable=false lynxi-device-plugin release/LynDevicePlugin-${version}.tgz
