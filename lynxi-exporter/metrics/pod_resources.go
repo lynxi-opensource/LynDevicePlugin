@@ -31,7 +31,7 @@ func NewPodContainerRecorder(smi smi.LynSMI, podRes *podresources.PodResources) 
 		}, labelsForPodContainerDevice()),
 		lynxiPodContainerHP280Count: promauto.NewGaugeVec(prometheus.GaugeOpts{
 			Name: "lynxi_pod_container_hp280_count",
-			Help: "The HP280 serial numbers and number of HP280 for each pod container.",
+			Help: "The device ids and number of devices for each pod container.",
 		}, labelsForPodContainerHP280()),
 		deviceID2UUID: make(map[string]string),
 		smi:           smi,
@@ -87,7 +87,6 @@ func (m *PodContainerRecorder) Record() error {
 		return err
 	} else {
 		m.lynxiPodContainerDeviceCount.Reset()
-		m.lynxiPodContainerHP280Count.Reset()
 		for _, res := range resp {
 			if len(res.IDs) != 0 {
 				sort.Sort(StringNumberSlice(res.IDs))
@@ -97,7 +96,6 @@ func (m *PodContainerRecorder) Record() error {
 					strings.Join(m.getUUIDs(res.IDs), ",")).Set(float64(len(res.IDs)))
 			}
 			if len(res.HP280s) != 0 {
-				sort.Sort(StringNumberSlice(res.HP280s))
 				m.lynxiPodContainerHP280Count.WithLabelValues(
 					res.Pod, res.Container, res.Namespace,
 					strings.Join(res.HP280s, ",")).Set(float64(len(res.HP280s)))
