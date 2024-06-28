@@ -19,6 +19,6 @@ make uninstall
 
 ## 更新版本
 
-1. 更新Makefile和build.sh中的版本号
-2. 更新LynDevicePlugin中的image tag和版本号
+1. 更新Makefile中的版本号
+2. 更新LynDevicePlugin/values.yaml中的image tag
 3. 构建发布

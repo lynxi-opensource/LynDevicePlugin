@@ -3,4 +3,4 @@
 /target/
 /Cargo.lock
 /bin/**/
-/test_utils/
+/tests/minikube/installer
